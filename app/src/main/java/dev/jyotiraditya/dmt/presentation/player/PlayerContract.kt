@@ -48,6 +48,7 @@ data class DmtState(
     val shuffle: Boolean = false,
     val repeat: Int = Player.REPEAT_MODE_OFF,
     val positionMs: Long = 0L,
+    val positionAtMs: Long = 0L,
     val durationMs: Long = 0L,
     val queue: List<QueueEntry> = emptyList(),
     val queueIndex: Int = 0,

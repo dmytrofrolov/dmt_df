@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.LruCache
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewModelScope
@@ -266,7 +267,12 @@ class PlayerViewModel @Inject constructor(
                 if (duration > 0) {
                     val target = (intent.fraction * duration).toLong()
                     seekTo(target)
-                    reduce { it.copy(positionMs = target) }
+                    reduce {
+                        it.copy(
+                            positionMs = target,
+                            positionAtMs = SystemClock.elapsedRealtime(),
+                        )
+                    }
                 }
             }
 
@@ -364,6 +370,7 @@ class PlayerViewModel @Inject constructor(
             restoreSession()
             while (isActive) {
                 val position = c.currentPosition.coerceAtLeast(0L)
+                val positionAt = SystemClock.elapsedRealtime()
                 val duration = c.duration.takeIf { d -> d != C.TIME_UNSET }?.coerceAtLeast(0L) ?: 0L
                 val index = c.currentMediaItemIndex
                 val sleepLeft = sleepEndAt?.let { end ->
@@ -382,6 +389,7 @@ class PlayerViewModel @Inject constructor(
                     } else {
                         it.copy(
                             positionMs = position,
+                            positionAtMs = positionAt,
                             durationMs = duration,
                             queueIndex = index,
                             queuePosition = if (index == it.queueIndex) {

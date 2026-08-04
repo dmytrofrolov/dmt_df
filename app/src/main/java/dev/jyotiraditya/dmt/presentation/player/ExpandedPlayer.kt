@@ -358,6 +358,7 @@ private fun ArtSlot(
             lyrics = lyrics,
             trackId = state.nowPlayingId,
             positionMs = state.positionMs,
+            positionAtMs = state.positionAtMs,
             durationMs = state.durationMs,
             isPlaying = state.isPlaying,
             romanized = state.settings.romanizedLyrics,

@@ -1,5 +1,6 @@
-package dev.jyotiraditya.lyrics
+package dev.jyotiraditya.lyrics.ttml
 
+import dev.jyotiraditya.lyrics.Voice
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -17,7 +18,7 @@ class TtmlLyricsParserTest {
 
     @Test
     fun `single voice ttml with background vocals parses cleanly`() {
-        val lyrics = TtmlLyricsParser.parse(fixture("ttml_single.ttml"))
+        val lyrics = TtmlParser.parse(fixture("ttml_single.ttml"))
         assertNotNull(lyrics)
         assertTrue(lyrics!!.synced)
         assertTrue(lyrics.lines.isNotEmpty())
@@ -33,8 +34,20 @@ class TtmlLyricsParserTest {
     }
 
     @Test
+    fun `a line runs until its backing vocals stop, not until its own end`() {
+        val lyrics = TtmlParser.parse(fixture("ttml_multivoice.ttml"))
+        assertNotNull(lyrics)
+
+        // the p carries end="59.483" but its x-bg "Ch-ch-ch" is sung until 1:01.162
+        val line = lyrics!!.lines.first { it.text.startsWith("I associate") }
+        assertEquals(56_532L, line.startMs)
+        assertEquals(61_162L, line.endMs)
+        assertEquals(61_162L, line.words.filter { it.background }.maxOf { it.endMs })
+    }
+
+    @Test
     fun `multi-voice ensemble ttml assigns distinct voices and a group voice`() {
-        val lyrics = TtmlLyricsParser.parse(fixture("ttml_multivoice.ttml"))
+        val lyrics = TtmlParser.parse(fixture("ttml_multivoice.ttml"))
         assertNotNull(lyrics)
         assertTrue(lyrics!!.synced)
 
@@ -49,7 +62,7 @@ class TtmlLyricsParserTest {
 
     @Test
     fun `a named group agent keeps its own color when it overlaps a soloist's duplicate line`() {
-        val lyrics = TtmlLyricsParser.parse(fixture("ttml_multivoice.ttml"))
+        val lyrics = TtmlParser.parse(fixture("ttml_multivoice.ttml"))
         assertNotNull(lyrics)
 
         // ensemble line, no overlap, keeps its own singer
@@ -66,7 +79,7 @@ class TtmlLyricsParserTest {
 
     @Test
     fun `translations block is attached to its matching line by itunes key`() {
-        val lyrics = TtmlLyricsParser.parse(fixture("ttml_single.ttml"))
+        val lyrics = TtmlParser.parse(fixture("ttml_single.ttml"))
         assertNotNull(lyrics)
 
         val first = lyrics!!.lines.first { it.startMs == 2_344L }
@@ -76,7 +89,7 @@ class TtmlLyricsParserTest {
 
     @Test
     fun `translation with an x-bg clause splits into separate segments`() {
-        val lyrics = TtmlLyricsParser.parse(fixture("ttml_single.ttml"))
+        val lyrics = TtmlParser.parse(fixture("ttml_single.ttml"))
         assertNotNull(lyrics)
 
         val line = lyrics!!.lines.first { it.startMs == 93_775L }
@@ -91,7 +104,7 @@ class TtmlLyricsParserTest {
 
     @Test
     fun `transliterations block is attached with its own word timing`() {
-        val lyrics = TtmlLyricsParser.parse(fixture("ttml_transliteration.ttml"))
+        val lyrics = TtmlParser.parse(fixture("ttml_transliteration.ttml"))
         assertNotNull(lyrics)
 
         val first = lyrics!!.lines.first { it.startMs == 1_594L }
@@ -104,7 +117,7 @@ class TtmlLyricsParserTest {
 
     @Test
     fun `inline x-translation and x-roman spans stay out of the sung text`() {
-        val lyrics = TtmlLyricsParser.parse(fixture("ttml_inline_translations.ttml"))
+        val lyrics = TtmlParser.parse(fixture("ttml_inline_translations.ttml"))
         assertNotNull(lyrics)
 
         val line = lyrics!!.lines.first { it.startMs == 29_990L }
@@ -118,7 +131,7 @@ class TtmlLyricsParserTest {
 
     @Test
     fun `multiple translation blocks in different languages all get captured`() {
-        val lyrics = TtmlLyricsParser.parse(fixture("ttml_multi_translation_blocks.ttml"))
+        val lyrics = TtmlParser.parse(fixture("ttml_multi_translation_blocks.ttml"))
         assertNotNull(lyrics)
 
         val line = lyrics!!.lines.first { it.startMs == 120_185L }
@@ -128,12 +141,12 @@ class TtmlLyricsParserTest {
 
     @Test
     fun `garbage input returns null instead of throwing`() {
-        assertNull(TtmlLyricsParser.parse("<tt><this is not valid xml"))
+        assertNull(TtmlParser.parse("<tt><this is not valid xml"))
     }
 
     @Test
     fun `distinct named group agents each get their own singer index`() {
-        val lyrics = TtmlLyricsParser.parse(fixture("ttml_named_groups.ttml"))
+        val lyrics = TtmlParser.parse(fixture("ttml_named_groups.ttml"))
         assertNotNull(lyrics)
         assertTrue(lyrics!!.synced)
 
@@ -153,7 +166,7 @@ class TtmlLyricsParserTest {
 
     @Test
     fun `spans split across source lines keep their word spacing`() {
-        val lyrics = TtmlLyricsParser.parse(fixture("ttml_pretty_printed.ttml"))
+        val lyrics = TtmlParser.parse(fixture("ttml_pretty_printed.ttml"))
         assertNotNull(lyrics)
         assertTrue(lyrics!!.synced)
 

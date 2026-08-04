@@ -1,5 +1,6 @@
-package dev.jyotiraditya.lyrics
+package dev.jyotiraditya.lyrics.lrc
 
+import dev.jyotiraditya.lyrics.Voice
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -19,7 +20,7 @@ class LrcLyricsParserTest {
 
     @Test
     fun `plain line-synced lrc has no word timing`() {
-        val lyrics = LrcLyricsParser.parse(fixture("plain.lrc"))
+        val lyrics = LrcParser.parse(fixture("plain.lrc"))
         assertNotNull(lyrics)
         assertTrue(lyrics!!.synced)
         assertTrue(lyrics.lines.isNotEmpty())
@@ -32,7 +33,7 @@ class LrcLyricsParserTest {
 
     @Test
     fun `enhanced word-timed lrc extracts per-word timing`() {
-        val lyrics = LrcLyricsParser.parse(fixture("enhanced.lrc"))
+        val lyrics = LrcParser.parse(fixture("enhanced.lrc"))
         assertNotNull(lyrics)
         assertTrue(lyrics!!.synced)
 
@@ -49,7 +50,7 @@ class LrcLyricsParserTest {
 
     @Test
     fun `voice prefix and background lines are handled`() {
-        val lyrics = LrcLyricsParser.parse(fixture("voice_bg.lrc"))
+        val lyrics = LrcParser.parse(fixture("voice_bg.lrc"))
         assertNotNull(lyrics)
         assertTrue(lyrics!!.synced)
 
@@ -69,7 +70,7 @@ class LrcLyricsParserTest {
 
     @Test
     fun `bg lines with a duplicated nested timestamp and voice prefix are cleaned`() {
-        val lyrics = LrcLyricsParser.parse(fixture("voice_bg_nested.lrc"))
+        val lyrics = LrcParser.parse(fixture("voice_bg_nested.lrc"))
         assertNotNull(lyrics)
         assertTrue(lyrics!!.synced)
 
@@ -88,7 +89,7 @@ class LrcLyricsParserTest {
 
     @Test
     fun `non-nested bg adlib after a cjk line is not swallowed as its transliteration`() {
-        val lyrics = LrcLyricsParser.parse(fixture("voice_bg_cjk_adlib.lrc"))
+        val lyrics = LrcParser.parse(fixture("voice_bg_cjk_adlib.lrc"))
         assertNotNull(lyrics)
         assertTrue(lyrics!!.synced)
 
@@ -98,12 +99,13 @@ class LrcLyricsParserTest {
         assertEquals("tensaiteki na aidoru-sama", main.transliteration!!.text)
 
         val adlib = lyrics.lines.first { it.words.isNotEmpty() && it.words.all { w -> w.background } }
-        assertEquals("(You're my savior, you're my saving grace)", adlib.text)
+        assertEquals("You're my savior, you're my saving grace", adlib.text)
+        assertEquals(adlib.text.length, adlib.words.last().end)
     }
 
     @Test
     fun `duet lrc keeps voice sides, own line ends, and bg singer`() {
-        val lyrics = LrcLyricsParser.parse(fixture("duet.lrc"))
+        val lyrics = LrcParser.parse(fixture("duet.lrc"))
         assertNotNull(lyrics)
 
         val lines = lyrics!!.lines.filter { !it.interlude }
@@ -126,7 +128,7 @@ class LrcLyricsParserTest {
 
     @Test
     fun `same-timestamp bilingual lines merge into one line with transliteration`() {
-        val lyrics = LrcLyricsParser.parse(fixture("bilingual.lrc"))
+        val lyrics = LrcParser.parse(fixture("bilingual.lrc"))
         assertNotNull(lyrics)
 
         val lines = lyrics!!.lines.filter { !it.interlude }
@@ -151,7 +153,7 @@ class LrcLyricsParserTest {
 
     @Test
     fun `three same-timestamp lines merge romaji as transliteration and english as translation`() {
-        val lyrics = LrcLyricsParser.parse(fixture("trilingual.lrc"))
+        val lyrics = LrcParser.parse(fixture("trilingual.lrc"))
         assertNotNull(lyrics)
 
         val lines = lyrics!!.lines.filter { !it.interlude }
@@ -174,15 +176,84 @@ class LrcLyricsParserTest {
     }
 
     @Test
+    fun `word times written in brackets are read as words, not as line times`() {
+        val lyrics = LrcParser.parse(
+            "[01:17.254][01:17.254]I'm [01:17.726]just [01:18.193]tired [01:18.710]of",
+        )
+        assertNotNull(lyrics)
+
+        val line = lyrics!!.lines.first { !it.interlude }
+        assertEquals(77_254L, line.startMs)
+        assertEquals("I'm just tired of", line.text)
+        assertEquals(
+            listOf("I'm", "just", "tired", "of"),
+            line.words.map { line.text.substring(it.start, it.end) },
+        )
+        assertEquals(listOf(77_254L, 77_726L, 78_193L, 78_710L), line.words.map { it.startMs })
+    }
+
+    @Test
+    fun `the last word of a line is sung even when no time closes it`() {
+        val lyrics = LrcParser.parse(
+            "[01:23.055]<01:23.055>Starting <01:24.039>to <01:24.474>fade",
+        )
+        assertNotNull(lyrics)
+
+        val last = lyrics!!.lines.first { !it.interlude }.words.last()
+        assertEquals(24_474L + 60_000L, last.startMs)
+        assertTrue(last.endMs > last.startMs)
+    }
+
+    @Test
+    fun `word times written as offsets from the line are moved onto it`() {
+        val lyrics = LrcParser.parse(
+            "[01:15.433]<00:00.000>Wires <00:00.920>and <00:01.288>chains<00:07.419>",
+        )
+        assertNotNull(lyrics)
+
+        val line = lyrics!!.lines.first { !it.interlude }
+        assertEquals(listOf(75_433L, 76_353L, 76_721L), line.words.map { it.startMs })
+        assertEquals(82_852L, line.words.last().endMs)
+    }
+
+    @Test
+    fun `a line written once but sung twice keeps its word timing at both times`() {
+        val lyrics = LrcParser.parse(
+            "[01:17.254][02:57.887]<01:17.254>I'm <01:17.726>just <01:18.193>tired <01:18.710>",
+        )
+        assertNotNull(lyrics)
+
+        val sung = lyrics!!.lines.filter { !it.interlude }
+        assertEquals(listOf(77_254L, 177_887L), sung.map { it.startMs })
+        assertEquals(listOf(177_887L, 178_359L, 178_826L), sung.last().words.map { it.startMs })
+    }
+
+    @Test
+    fun `lines a hair apart still pair as one line and its reading`() {
+        val lyrics = LrcParser.parse(
+            """
+            [00:16.24]単純なステージ
+            [00:16.35]Tanjun na stage
+            [00:18.57]渇くほど願い
+            """.trimIndent(),
+        )
+        assertNotNull(lyrics)
+
+        val first = lyrics!!.lines.first { !it.interlude }
+        assertEquals("単純なステージ", first.text)
+        assertEquals("Tanjun na stage", first.transliteration?.text)
+    }
+
+    @Test
     fun `matches detects bracket timestamps only`() {
-        assertTrue(LrcLyricsParser.matches(fixture("plain.lrc")))
-        assertTrue(LrcLyricsParser.matches(fixture("enhanced.lrc")))
-        assertFalse(LrcLyricsParser.matches("just some plain unsynced text\nwith multiple lines"))
+        assertTrue(LrcParser.matches(fixture("plain.lrc")))
+        assertTrue(LrcParser.matches(fixture("enhanced.lrc")))
+        assertFalse(LrcParser.matches("just some plain unsynced text\nwith multiple lines"))
     }
 
     @Test
     fun `parse returns null when there is nothing synced`() {
-        assertNull(LrcLyricsParser.parse("no timestamps here at all"))
+        assertNull(LrcParser.parse("no timestamps here at all"))
     }
 
     @Test
@@ -196,7 +267,7 @@ class LrcLyricsParserTest {
             [00:14.53]The end is distant
         """.trimIndent()
 
-        val lyrics = LrcLyricsParser.parse(raw)
+        val lyrics = LrcParser.parse(raw)
         assertNotNull(lyrics)
         assertEquals(1, lyrics!!.lines.count { !it.interlude })
         assertEquals("The end is distant", lyrics.lines.first { !it.interlude }.text)
@@ -210,7 +281,7 @@ class LrcLyricsParserTest {
             [00:25.94]Yet one grain of hope remains here
         """.trimIndent()
 
-        val lyrics = LrcLyricsParser.parse(raw)
+        val lyrics = LrcParser.parse(raw)
         assertNotNull(lyrics)
         assertTrue(lyrics!!.lines.none { it.text.isBlank() })
     }
@@ -222,7 +293,7 @@ class LrcLyricsParserTest {
             [00:05.67]centisecond precision
         """.trimIndent()
 
-        val lyrics = LrcLyricsParser.parse(raw)
+        val lyrics = LrcParser.parse(raw)
         assertNotNull(lyrics)
 
         val lines = lyrics!!.lines.filter { !it.interlude }
@@ -232,7 +303,7 @@ class LrcLyricsParserTest {
 
     @Test
     fun `real trio track parses every line and resolves three distinct singers`() {
-        val lyrics = LrcLyricsParser.parse(fixture("duet.lrc"))
+        val lyrics = LrcParser.parse(fixture("duet.lrc"))
         assertNotNull(lyrics)
         assertTrue(lyrics!!.synced)
 
@@ -246,7 +317,7 @@ class LrcLyricsParserTest {
 
     @Test
     fun `real trio track folds the intro note-glyph pickup into an interlude marker`() {
-        val lyrics = LrcLyricsParser.parse(fixture("duet.lrc"))
+        val lyrics = LrcParser.parse(fixture("duet.lrc"))
         assertNotNull(lyrics)
 
         val intro = lyrics!!.lines.first { it.startMs == 50L }
@@ -258,8 +329,8 @@ class LrcLyricsParserTest {
     @Test
     fun `a note-glyph line and a plain silence gap render the same marker`() {
         // glyph intro vs a real silence gap, same marker either way
-        val glyphIntro = LrcLyricsParser.parse(fixture("duet.lrc"))!!.lines.first { it.interlude }
-        val gapIntro = LrcLyricsParser.parse(fixture("plain.lrc"))!!.lines.first { it.interlude }
+        val glyphIntro = LrcParser.parse(fixture("duet.lrc"))!!.lines.first { it.interlude }
+        val gapIntro = LrcParser.parse(fixture("plain.lrc"))!!.lines.first { it.interlude }
 
         assertEquals("* * *", glyphIntro.text)
         assertEquals("* * *", gapIntro.text)
@@ -267,7 +338,7 @@ class LrcLyricsParserTest {
 
     @Test
     fun `real trio track keeps a mid-song overlapping bg line separate from the main lyric`() {
-        val lyrics = LrcLyricsParser.parse(fixture("duet.lrc"))
+        val lyrics = LrcParser.parse(fixture("duet.lrc"))
         assertNotNull(lyrics)
 
         // the main line here is a totally different sentence from the bg line
@@ -285,7 +356,7 @@ class LrcLyricsParserTest {
 
     @Test
     fun `real trio track preserves a literal space inside a run of word-timed CJK`() {
-        val lyrics = LrcLyricsParser.parse(fixture("duet.lrc"))
+        val lyrics = LrcParser.parse(fixture("duet.lrc"))
         assertNotNull(lyrics)
 
         // there's a real space between "闇と" and "孤独" in the source, word
@@ -296,7 +367,7 @@ class LrcLyricsParserTest {
 
     @Test
     fun `real trio track has valid word bounds and no leaked tags anywhere`() {
-        val lyrics = LrcLyricsParser.parse(fixture("duet.lrc"))
+        val lyrics = LrcParser.parse(fixture("duet.lrc"))
         assertNotNull(lyrics)
 
         for (line in lyrics!!.lines) {
@@ -315,7 +386,7 @@ class LrcLyricsParserTest {
 
     @Test
     fun `real trio track pins each singer to one side for the whole song`() {
-        val lyrics = LrcLyricsParser.parse(fixture("duet.lrc"))
+        val lyrics = LrcParser.parse(fixture("duet.lrc"))
         assertNotNull(lyrics)
 
         val sung = lyrics!!.lines.filter { !it.interlude && it.voice != Voice.GROUP }

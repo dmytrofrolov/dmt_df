@@ -2,7 +2,6 @@ package dev.jyotiraditya.dmt.presentation.player
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,14 +11,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.MutableLongState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -27,7 +24,6 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.jyotiraditya.dmt.core.common.TuiPanel
@@ -35,38 +31,33 @@ import dev.jyotiraditya.dmt.core.common.tuiClickable
 import dev.jyotiraditya.dmt.ui.theme.TuiAccent
 import dev.jyotiraditya.dmt.ui.theme.TuiDim
 import dev.jyotiraditya.dmt.ui.theme.TuiFaint
-import dev.jyotiraditya.dmt.ui.theme.TuiFg
 import dev.jyotiraditya.dmt.util.clusterEnd
-import dev.jyotiraditya.dmt.util.clusters
 import dev.jyotiraditya.lyrics.LyricLine
-import dev.jyotiraditya.lyrics.LyricWord
 import dev.jyotiraditya.lyrics.Lyrics
 import dev.jyotiraditya.lyrics.TimedText
-import dev.jyotiraditya.lyrics.Voice
-import java.util.Locale
 import kotlin.math.ceil
 
-private enum class LineState { ACTIVE, PASSED, UPCOMING }
+private val SECTION_GAP = 18.dp
+private val LINE_GAP = 6.dp
+private const val LINES_ABOVE_ACTIVE = 2
 
 @Composable
 fun LyricsPanel(
     lyrics: Lyrics,
     trackId: String?,
     positionMs: Long,
+    positionAtMs: Long,
     durationMs: Long,
     isPlaying: Boolean,
     romanized: Boolean,
     onSeekFraction: (Float) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val position = smoothPositionMs(positionMs, isPlaying)
+    val position = smoothPositionMs(positionMs, positionAtMs, isPlaying && lyrics.synced)
     val listState = rememberLazyListState()
-    val scrollTarget = remember(position, lyrics) {
-        if (!lyrics.synced) {
-            -1
-        } else {
-            val active = lyrics.lines.indexOfFirst { position in it.startMs until it.endMs }
-            if (active >= 0) active else lyrics.lines.indexOfLast { it.endMs in 0..position }
+    val scrollTarget = remember(lyrics) {
+        derivedStateOf {
+            if (lyrics.synced) lyrics.lines.indexAt(position.longValue) else -1
         }
     }
 
@@ -74,9 +65,11 @@ fun LyricsPanel(
         listState.scrollToItem(0)
     }
 
-    LaunchedEffect(scrollTarget) {
-        if (lyrics.synced && scrollTarget >= 0) {
-            listState.animateScrollToItem((scrollTarget - 2).coerceAtLeast(0))
+    LaunchedEffect(lyrics, listState) {
+        snapshotFlow { scrollTarget.value }.collect { target ->
+            if (lyrics.synced && target >= 0) {
+                listState.animateScrollToItem((target - LINES_ABOVE_ACTIVE).coerceAtLeast(0))
+            }
         }
     }
 
@@ -87,8 +80,8 @@ fun LyricsPanel(
                     LyricLineRows(
                         line = line,
                         romanized = romanized,
-                        state = lineState(line, position, lyrics.synced),
-                        positionMs = position,
+                        position = position,
+                        synced = lyrics.synced,
                         seekable = lyrics.synced && durationMs > 0 && line.startMs >= 0,
                         onClick = {
                             onSeekFraction(
@@ -102,95 +95,21 @@ fun LyricsPanel(
     }
 }
 
-private fun lineState(
-    line: LyricLine,
-    positionMs: Long,
-    synced: Boolean,
-): LineState =
-    when {
-        !synced || line.startMs < 0 -> LineState.UPCOMING
-        positionMs in line.startMs until line.endMs -> LineState.ACTIVE
-        line.endMs <= positionMs -> LineState.PASSED
-        else -> LineState.UPCOMING
-    }
-
-private data class LyricRun(
-    val background: Boolean,
-    val text: String,
-    val words: List<LyricWord>,
-)
-
-private fun buildRuns(line: LyricLine): List<LyricRun> {
-    if (line.words.isEmpty()) {
-        return listOf(
-            LyricRun(
-                background = false,
-                text = line.text,
-                words = emptyList(),
-            ),
-        )
-    }
-
-    val groups = mutableListOf<MutableList<LyricWord>>()
-    line.words.sortedBy { it.start }.forEach { word ->
-        val current = groups.lastOrNull()
-        if (current != null && current.last().background == word.background) {
-            current += word
-        } else {
-            groups += mutableListOf(word)
-        }
-    }
-
-    val runs = mutableListOf<LyricRun>()
-    var boundary = 0
-    groups.forEachIndexed { index, group ->
-        val runStart = boundary
-        val runEnd = if (index == groups.lastIndex) {
-            line.text.length
-        } else {
-            groups[index + 1].first().start
-        }
-        val raw = line.text.substring(runStart, runEnd)
-        val leading = raw.takeWhile(Char::isWhitespace).length
-        val trimmed = raw.trim()
-        val shift = runStart + leading
-        val words = group.map { word ->
-            word.copy(
-                start = (word.start - shift).coerceIn(0, trimmed.length),
-                end = (word.end - shift).coerceIn(0, trimmed.length),
-            )
-        }
-        runs += LyricRun(
-            background = group.first().background,
-            text = trimmed,
-            words = words,
-        )
-        boundary = runEnd
-    }
-    return runs
-}
-
-private fun isArabicScript(text: String): Boolean =
-    text.any { Character.UnicodeScript.of(it.code) == Character.UnicodeScript.ARABIC }
-
-private fun TextUnit.scaledBy(factor: Float): TextUnit = (value * factor).sp
-
-private fun singerColorFor(line: LyricLine): Color =
-    when {
-        line.interlude -> singerPalette.first()
-        line.singer < 0 -> GroupVoice
-        else -> singerPalette[line.singer % singerPalette.size]
-    }
-
 @Composable
 private fun LyricLineRows(
     line: LyricLine,
     romanized: Boolean,
-    state: LineState,
-    positionMs: Long,
+    position: MutableLongState,
+    synced: Boolean,
     seekable: Boolean,
     onClick: () -> Unit,
 ) {
+    val lineStates = remember(line, synced) {
+        derivedStateOf { lineState(line, position.longValue, synced) }
+    }
+    val state = lineStates.value
+    val positionMs = state.positionIn(line, position.longValue)
+
     val translit = line.transliteration
     val shown = if (romanized && translit != null) {
         line.copy(
@@ -205,37 +124,29 @@ private fun LyricLineRows(
         line
     }
 
-    val singerColor = singerColorFor(shown)
-    val hasSinger = !shown.interlude && shown.singer >= 0
-    val align = when (shown.voice) {
-        Voice.SECONDARY -> TextAlign.End
-        Voice.GROUP -> TextAlign.Center
-        else -> TextAlign.Start
-    }
-
     val rowModifier = Modifier
         .fillMaxWidth()
         .let { if (seekable) it.tuiClickable(onClick) else it }
+        .padding(top = if (shown.sectionStart) SECTION_GAP else LINE_GAP, bottom = LINE_GAP)
 
     if (shown.interlude) {
         InterludeRow(
             line = shown,
             state = state,
             positionMs = positionMs,
-            modifier = rowModifier.padding(
-                top = if (shown.sectionStart) 18.dp else 6.dp,
-                bottom = 6.dp,
-            ),
+            modifier = rowModifier,
         )
         return
     }
 
     val runs = remember(shown) { buildRuns(shown) }
     val secondaryRuns = remember(shown, runs) { secondaryRunsFor(shown, runs) }
-    Column(
-        modifier = rowModifier
-            .padding(top = if (shown.sectionStart) 18.dp else 6.dp, bottom = 6.dp),
-    ) {
+
+    val singerColor = singerColorFor(shown)
+    val hasSinger = !shown.interlude && shown.singer >= 0
+    val align = alignFor(shown.voice)
+
+    Column(modifier = rowModifier) {
         (runs + secondaryRuns).forEach { run ->
             LyricRunText(
                 run = run,
@@ -249,48 +160,49 @@ private fun LyricLineRows(
     }
 }
 
-private fun secondaryRunsFor(
-    line: LyricLine,
-    runs: List<LyricRun>,
-): List<LyricRun> = buildList {
-    line.transliteration?.let { translit ->
-        add(
-            LyricRun(
-                background = true,
-                text = translit.text,
-                words = translit.words,
-            ),
-        )
-    }
+@Composable
+private fun LyricRunText(
+    run: LyricRun,
+    state: LineState,
+    positionMs: Long,
+    singerColor: Color,
+    hasSinger: Boolean,
+    align: TextAlign,
+) {
+    val sweepState = runState(run, positionMs, state)
+    val karaoke = sweepState == LineState.ACTIVE && run.words.isNotEmpty()
+    val clusters = remember(run.text) { RunClusters(run.text) }
 
-    val translations = line.translation.preferredTranslation()
-    val originals = if (runs.size == translations.size) {
-        runs.map { it.text }
+    val annotated = if (karaoke) {
+        sweptText(run, clusters, positionMs, sweepColorsFor(run, singerColor))
     } else {
-        null
+        AnnotatedString(run.text)
     }
 
-    translations.forEachIndexed { i, segment ->
-        val original = originals?.get(i) ?: line.text
-        if (!segment.text.equals(original, ignoreCase = true)) {
-            add(
-                LyricRun(
-                    background = true,
-                    text = segment.text,
-                    words = segment.words,
-                ),
-            )
-        }
+    val baseStyle = if (run.background) {
+        MaterialTheme.typography.bodySmall
+    } else {
+        MaterialTheme.typography.headlineSmall
     }
-}
+    val arabic = remember(run.text) { isArabicScript(run.text) }
 
-private fun List<TimedText>.preferredTranslation(): List<TimedText> {
-    val distinctLangs = mapNotNull { it.lang }.distinct()
-    if (distinctLangs.size <= 1) return this
-
-    val deviceLang = Locale.getDefault().language
-    val match = firstOrNull { it.lang == deviceLang } ?: firstOrNull { it.lang == "en" } ?: first()
-    return listOf(match)
+    Text(
+        text = annotated,
+        style = baseStyle.copy(
+            fontSize = if (arabic) baseStyle.fontSize.scaledBy(ARABIC_SCALE) else baseStyle.fontSize,
+            fontWeight = if (sweepState == LineState.ACTIVE && !run.background) {
+                FontWeight.Bold
+            } else {
+                FontWeight.Normal
+            },
+            fontStyle = if (run.background) FontStyle.Italic else FontStyle.Normal,
+            letterSpacing = 0.sp,
+            textDirection = TextDirection.Content,
+        ),
+        color = runColorFor(run, sweepState, karaoke, singerColor, hasSinger),
+        textAlign = align,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @Composable
@@ -314,6 +226,7 @@ private fun InterludeRow(
     } else {
         AnnotatedString(line.text)
     }
+
     Text(
         text = annotated,
         style = MaterialTheme.typography.headlineSmall,
@@ -321,148 +234,4 @@ private fun InterludeRow(
         textAlign = TextAlign.Center,
         modifier = modifier.fillMaxWidth(),
     )
-}
-
-private data class SweepColors(
-    val sung: Color,
-    val unsung: Color,
-)
-
-private fun runState(
-    run: LyricRun,
-    positionMs: Long,
-    fallback: LineState,
-): LineState {
-    if (run.words.isEmpty()) return fallback
-    val start = run.words.minOf { it.startMs }
-    val end = run.words.maxOf { it.endMs }
-    return when {
-        positionMs < start -> LineState.UPCOMING
-        positionMs >= end -> LineState.PASSED
-        else -> LineState.ACTIVE
-    }
-}
-
-@Composable
-private fun LyricRunText(
-    run: LyricRun,
-    state: LineState,
-    positionMs: Long,
-    singerColor: Color,
-    hasSinger: Boolean,
-    align: TextAlign,
-) {
-    val sweepState = runState(run, positionMs, state)
-    val karaoke = sweepState == LineState.ACTIVE && run.words.isNotEmpty()
-    val sweepColors = if (run.background) {
-        SweepColors(
-            sung = TuiFg,
-            unsung = TuiFaint,
-        )
-    } else {
-        SweepColors(
-            sung = singerColor,
-            unsung = TuiDim,
-        )
-    }
-
-    val annotated: AnnotatedString = if (karaoke) {
-        buildAnnotatedString {
-            append(run.text)
-            run.words.forEach { word ->
-                when {
-                    positionMs >= word.endMs ->
-                        addStyle(SpanStyle(color = sweepColors.sung), word.start, word.end)
-
-                    positionMs >= word.startMs -> {
-                        val span = (word.endMs - word.startMs).coerceAtLeast(1)
-                        val fraction =
-                            ((positionMs - word.startMs).toFloat() / span).coerceIn(0f, 1f)
-                        val clusters = run.text.clusters(word.start, word.end)
-                        val steps = clusters.size - 1
-                        val exact = fraction * steps
-                        val step = exact.toInt().coerceIn(0, steps - 1)
-                        val sungEnd = clusters[step]
-                        val edgeEnd = clusters[step + 1]
-                        if (sungEnd > word.start) {
-                            addStyle(SpanStyle(color = sweepColors.sung), word.start, sungEnd)
-                        }
-                        val edge = lerp(sweepColors.unsung, sweepColors.sung, exact - step)
-                        addStyle(SpanStyle(color = edge), sungEnd, edgeEnd)
-                        if (edgeEnd < word.end) {
-                            addStyle(SpanStyle(color = sweepColors.unsung), edgeEnd, word.end)
-                        }
-                    }
-
-                    else ->
-                        addStyle(SpanStyle(color = sweepColors.unsung), word.start, word.end)
-                }
-            }
-        }
-    } else {
-        AnnotatedString(run.text)
-    }
-
-    val lineColor = when {
-        run.background && sweepState == LineState.ACTIVE -> TuiFg
-        run.background && sweepState == LineState.PASSED -> TuiFaint
-        run.background -> TuiDim
-        sweepState == LineState.ACTIVE && karaoke -> TuiDim
-        sweepState == LineState.ACTIVE -> singerColor
-        sweepState == LineState.PASSED && hasSinger -> lerp(singerColor, TuiFaint, 0.8f)
-        sweepState == LineState.PASSED -> TuiFaint
-        else -> TuiDim
-    }
-
-    val baseStyle = if (run.background) {
-        MaterialTheme.typography.bodySmall
-    } else {
-        MaterialTheme.typography.headlineSmall
-    }
-    val arabic = remember(run.text) { isArabicScript(run.text) }
-
-    Text(
-        text = annotated,
-        style = baseStyle.copy(
-            fontSize = if (arabic) baseStyle.fontSize.scaledBy(1.18f) else baseStyle.fontSize,
-            fontWeight = if (sweepState == LineState.ACTIVE && !run.background) {
-                FontWeight.Bold
-            } else {
-                FontWeight.Normal
-            },
-            fontStyle = if (run.background) FontStyle.Italic else FontStyle.Normal,
-            letterSpacing = 0.sp,
-            textDirection = TextDirection.Content,
-        ),
-        color = lineColor,
-        textAlign = align,
-        modifier = Modifier.fillMaxWidth(),
-    )
-}
-
-@Composable
-private fun smoothPositionMs(positionMs: Long, isPlaying: Boolean): Long {
-    var display by remember { mutableLongStateOf(positionMs) }
-    LaunchedEffect(positionMs, isPlaying) {
-        if (!isPlaying) {
-            display = positionMs
-            return@LaunchedEffect
-        }
-        val anchorPositionMs = positionMs
-        var anchorNanos = 0L
-
-        while (true) {
-            withFrameNanos { frameNanos ->
-                if (anchorNanos == 0L) anchorNanos = frameNanos
-
-                val elapsedMs = (frameNanos - anchorNanos) / 1_000_000
-                val interpolatedMs = anchorPositionMs + elapsedMs
-                val wouldJumpBackSlightly =
-                    interpolatedMs < display && display - interpolatedMs < 300
-
-                display = if (wouldJumpBackSlightly) display else interpolatedMs
-            }
-        }
-    }
-    return display
 }
