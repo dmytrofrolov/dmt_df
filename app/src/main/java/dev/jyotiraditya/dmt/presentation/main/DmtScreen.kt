@@ -194,6 +194,7 @@ fun DmtScreen(
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     LaunchedEffect(state.expanded, route, state.view, showQueueSheet, showInfoSheet) {
+        if (route == ROUTE_SEARCH) return@LaunchedEffect
         focusManager.clearFocus()
         keyboard?.hide()
     }

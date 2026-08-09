@@ -6,6 +6,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Modifier
@@ -29,12 +33,19 @@ fun SearchPane(
     onOpenAlbum: (String) -> Unit,
     onOpenArtist: (String) -> Unit,
 ) {
+    val focusRequester = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+        keyboard?.show()
+    }
     Column {
         SearchRow(
             query = state.query,
             hint = stringResource(R.string.search_hint),
             shown = state.filtered.size,
             onQuery = { dispatch(DmtAction.Query(it)) },
+            focusRequester = focusRequester,
         )
         if (state.query.isBlank()) {
             Caption(stringResource(R.string.search_empty))
