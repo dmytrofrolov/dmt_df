@@ -45,8 +45,9 @@ class LrclibApi @Inject constructor(
 
         if (json.optBoolean("instrumental")) return null
 
-        return json.optString("syncedLyrics")
-            .ifBlank { json.optString("plainLyrics") }
-            .ifBlank { null }
+        fun text(key: String): String? =
+            if (json.isNull(key)) null else json.optString(key).ifBlank { null }
+
+        return text("syncedLyrics") ?: text("plainLyrics")
     }
 }
