@@ -1,12 +1,12 @@
 <resources>
     <string name="app_name" translatable="false">dmt</string>
 
-    <string name="tab_library">1:tracks</string>
-    <string name="tab_albums">2:albums</string>
-    <string name="tab_artists">3:artists</string>
-    <string name="tab_genres">4:genres</string>
-    <string name="tab_folders">5:folders</string>
-    <string name="tab_playlists">6:lists</string>
+    <string name="tab_library">tracks</string>
+    <string name="tab_albums">albums</string>
+    <string name="tab_artists">artists</string>
+    <string name="tab_genres">genres</string>
+    <string name="tab_folders">folders</string>
+    <string name="tab_playlists">lists</string>
     <string name="auto_tracks">tracks</string>
     <string name="auto_albums">albums</string>
     <string name="auto_artists">artists</string>
