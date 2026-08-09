@@ -69,6 +69,7 @@ import dev.jyotiraditya.dmt.presentation.home.HomePane
 import dev.jyotiraditya.dmt.presentation.library.AlbumsPane
 import dev.jyotiraditya.dmt.presentation.library.ArtistsPane
 import dev.jyotiraditya.dmt.presentation.library.FoldersPane
+import dev.jyotiraditya.dmt.presentation.library.GenresPane
 import dev.jyotiraditya.dmt.presentation.library.LibraryPane
 import dev.jyotiraditya.dmt.presentation.library.PlaylistsPane
 import dev.jyotiraditya.dmt.presentation.player.ChainContent
@@ -103,6 +104,7 @@ private val LIBRARY_VIEWS = setOf(
     DmtView.LIBRARY,
     DmtView.ALBUMS,
     DmtView.ARTISTS,
+    DmtView.GENRES,
     DmtView.FOLDERS,
     DmtView.PLAYLISTS,
 )
@@ -121,6 +123,7 @@ private fun backStep(route: String, state: DmtState): DmtAction? =
         ROUTE_LIBRARY -> when (state.view) {
             DmtView.ALBUMS -> state.openAlbum?.let { DmtAction.OpenAlbum(null) }
             DmtView.ARTISTS -> state.openArtist?.let { DmtAction.OpenArtist(null) }
+            DmtView.GENRES -> state.openGenre?.let { DmtAction.OpenGenre(null) }
             DmtView.FOLDERS -> state.openFolder?.let { DmtAction.OpenFolder(null) }
             DmtView.PLAYLISTS -> state.openPlaylist?.let { DmtAction.OpenPlaylist(null) }
             else -> null
@@ -432,6 +435,7 @@ private fun SectionPane(
 
                 view == DmtView.ALBUMS -> AlbumsPane(state, dispatch)
                 view == DmtView.ARTISTS -> ArtistsPane(state, dispatch)
+                view == DmtView.GENRES -> GenresPane(state, dispatch)
                 view == DmtView.FOLDERS -> FoldersPane(state, dispatch)
                 view == DmtView.PLAYLISTS -> PlaylistsPane(state, dispatch)
                 else -> LibraryPane(state, dispatch)
@@ -571,6 +575,9 @@ private fun libraryTabs(state: DmtState): List<Pair<String, DmtView>> =
         add(stringResource(R.string.tab_library) to DmtView.LIBRARY)
         add(stringResource(R.string.tab_albums) to DmtView.ALBUMS)
         add(stringResource(R.string.tab_artists) to DmtView.ARTISTS)
+        if (state.genres.isNotEmpty()) {
+            add(stringResource(R.string.tab_genres) to DmtView.GENRES)
+        }
         if (state.folders.isNotEmpty()) {
             add(stringResource(R.string.tab_folders) to DmtView.FOLDERS)
             add(stringResource(R.string.tab_playlists) to DmtView.PLAYLISTS)

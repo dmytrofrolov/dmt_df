@@ -30,6 +30,7 @@ import dev.jyotiraditya.dmt.data.repository.TrackMediaRepository
 import dev.jyotiraditya.dmt.domain.model.Album
 import dev.jyotiraditya.dmt.domain.model.Artist
 import dev.jyotiraditya.dmt.domain.model.Folder
+import dev.jyotiraditya.dmt.domain.model.Genre
 import dev.jyotiraditya.dmt.domain.model.LibrarySort
 import dev.jyotiraditya.dmt.domain.model.Playlist
 import dev.jyotiraditya.dmt.domain.model.SourceMode
@@ -77,6 +78,7 @@ private data class FilteredLibrary(
     val albums: List<Album>,
     val artists: List<Artist>,
     val folders: List<Folder>,
+    val genres: List<Genre>,
 )
 
 @OptIn(FlowPreview::class)
@@ -159,6 +161,9 @@ class PlayerViewModel @Inject constructor(
     private fun filterFolders(folders: List<Folder>, query: String): List<Folder> =
         folders.matching(query) { listOf(it.name) }
 
+    private fun filterGenres(genres: List<Genre>, query: String): List<Genre> =
+        genres.matching(query) { listOf(it.name) }
+
     private fun mutatePlaylists(block: () -> Unit = {}) {
         viewModelScope.launch(Dispatchers.IO) {
             block()
@@ -183,15 +188,17 @@ class PlayerViewModel @Inject constructor(
                 val albums = currentState.albums
                 val artists = currentState.artists
                 val folders = currentState.folders
+                val genres = currentState.genres
                 val sort = currentState.settings.librarySort
                 viewModelScope.launch {
-                    val (filteredTracks, filteredAlbums, filteredArtists, filteredFolders) =
+                    val (filteredTracks, filteredAlbums, filteredArtists, filteredFolders, filteredGenres) =
                         withContext(Dispatchers.Default) {
                             FilteredLibrary(
                                 tracks = filter(tracks, query, sort),
                                 albums = filterAlbums(albums, query),
                                 artists = filterArtists(artists, query),
                                 folders = filterFolders(folders, query),
+                                genres = filterGenres(genres, query),
                             )
                         }
                     if (currentState.query == query) {
@@ -201,6 +208,7 @@ class PlayerViewModel @Inject constructor(
                                 filteredAlbums = filteredAlbums,
                                 filteredArtists = filteredArtists,
                                 filteredFolders = filteredFolders,
+                                filteredGenres = filteredGenres,
                             )
                         }
                     }
@@ -214,6 +222,7 @@ class PlayerViewModel @Inject constructor(
             is DmtAction.OpenAlbum -> reduce { it.copy(openAlbum = intent.name) }
             is DmtAction.OpenArtist -> reduce { it.copy(openArtist = intent.name) }
             is DmtAction.OpenFolder -> reduce { it.copy(openFolder = intent.path) }
+            is DmtAction.OpenGenre -> reduce { it.copy(openGenre = intent.name) }
             is DmtAction.OpenPlaylist -> reduce { it.copy(openPlaylist = intent.name) }
 
             is DmtAction.CreatePlaylist -> mutatePlaylists {
@@ -516,10 +525,12 @@ class PlayerViewModel @Inject constructor(
                         albums = emptyList(),
                         artists = emptyList(),
                         folders = emptyList(),
+                        genres = emptyList(),
                         filtered = emptyList(),
                         filteredAlbums = emptyList(),
                         filteredArtists = emptyList(),
                         filteredFolders = emptyList(),
+                        filteredGenres = emptyList(),
                         error = context.getString(
                             R.string.scan_failed,
                             state.settings.sourceMode.label,
@@ -528,16 +539,16 @@ class PlayerViewModel @Inject constructor(
                 }
                 return@launch
             }
-            val (filteredTracks, filteredAlbums, filteredArtists, filteredFolders) = withContext(
-                Dispatchers.Default,
-            ) {
-                FilteredLibrary(
-                    tracks = filter(library.tracks, query, currentState.settings.librarySort),
-                    albums = filterAlbums(library.albums, query),
-                    artists = filterArtists(library.artists, query),
-                    folders = filterFolders(library.folders, query),
-                )
-            }
+            val (filteredTracks, filteredAlbums, filteredArtists, filteredFolders, filteredGenres) =
+                withContext(Dispatchers.Default) {
+                    FilteredLibrary(
+                        tracks = filter(library.tracks, query, currentState.settings.librarySort),
+                        albums = filterAlbums(library.albums, query),
+                        artists = filterArtists(library.artists, query),
+                        folders = filterFolders(library.folders, query),
+                        genres = filterGenres(library.genres, query),
+                    )
+                }
             reduce {
                 it.copy(
                     scanning = false,
@@ -545,10 +556,12 @@ class PlayerViewModel @Inject constructor(
                     albums = library.albums,
                     artists = library.artists,
                     folders = library.folders,
+                    genres = library.genres,
                     filtered = filteredTracks,
                     filteredAlbums = filteredAlbums,
                     filteredArtists = filteredArtists,
                     filteredFolders = filteredFolders,
+                    filteredGenres = filteredGenres,
                     error = null,
                 ).withHome()
             }

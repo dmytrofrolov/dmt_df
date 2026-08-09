@@ -49,6 +49,7 @@ object MetadataReader {
                     album = tags?.albumTitle?.toString(),
                     trackNumber = tags?.trackNumber ?: 0,
                     discNumber = tags?.discNumber ?: 0,
+                    genre = tags?.genre?.toString(),
                 )
             }
     }.getOrDefault(TrackMetadata())

@@ -33,4 +33,5 @@ data class LibraryTrack(
     val clipStartMs: Long? = null,
     /** Where the track ends in its file, or null if it ends with the file. */
     val clipEndMs: Long? = null,
+    val genre: String? = null,
 )

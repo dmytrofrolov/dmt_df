@@ -8,4 +8,5 @@ data class TrackMetadata(
     val album: String? = null,
     val trackNumber: Int = 0,
     val discNumber: Int = 0,
+    val genre: String? = null,
 )

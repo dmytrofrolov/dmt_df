@@ -36,6 +36,13 @@ fun List<Track>.toArtists(): List<Artist> =
         }
         .sortedBy { it.name.lowercase() }
 
+fun List<Track>.toGenres(): List<Genre> =
+    groupBy { it.genre?.takeIf(String::isNotBlank)?.lowercase() ?: UNKNOWN_GENRE }
+        .map { (_, tracks) ->
+            Genre(name = tracks.first().genre?.takeIf(String::isNotBlank) ?: UNKNOWN_GENRE, tracks = tracks)
+        }
+        .sortedBy { it.name.lowercase() }
+
 fun List<Track>.toAlbums(): List<Album> =
     groupBy { it.album }
         .map { (name, tracks) ->

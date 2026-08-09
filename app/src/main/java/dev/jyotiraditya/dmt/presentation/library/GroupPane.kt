@@ -96,6 +96,28 @@ fun ArtistsPane(state: DmtState, dispatch: (DmtAction) -> Unit) {
 }
 
 @Composable
+fun GenresPane(state: DmtState, dispatch: (DmtAction) -> Unit) {
+    GroupPane(
+        spec = GroupSpec(
+            items = state.genres,
+            filtered = state.filteredGenres,
+            openKey = state.openGenre,
+            emptyText = R.string.no_genres,
+            countPlural = R.plurals.genre_count,
+            key = { it.name },
+            title = { it.name },
+            listMeta = { "${it.tracks.size} trk" },
+            detailMeta = { "" },
+            trackMeta = { trackLine2(it) },
+            tracks = { it.tracks },
+            open = { DmtAction.OpenGenre(it) },
+        ),
+        state = state,
+        dispatch = dispatch,
+    )
+}
+
+@Composable
 fun FoldersPane(state: DmtState, dispatch: (DmtAction) -> Unit) {
     GroupPane(
         spec = GroupSpec(

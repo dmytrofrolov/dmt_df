@@ -8,6 +8,7 @@ import dev.jyotiraditya.dmt.domain.model.Artist
 import dev.jyotiraditya.dmt.domain.model.DmtSettings
 import dev.jyotiraditya.dmt.domain.model.DmtStats
 import dev.jyotiraditya.dmt.domain.model.Folder
+import dev.jyotiraditya.dmt.domain.model.Genre
 import dev.jyotiraditya.dmt.domain.model.HomeShelves
 import dev.jyotiraditya.dmt.domain.model.LyricsSource
 import dev.jyotiraditya.lyrics.Lyrics
@@ -18,8 +19,8 @@ import dev.jyotiraditya.dmt.domain.model.Track
 import dev.jyotiraditya.dmt.util.QueueEntry
 
 enum class DmtView {
-    LIBRARY, ALBUMS, ARTISTS, FOLDERS, PLAYLISTS, SETTINGS, STATS, BLOCKLIST, SOURCES, SOURCE_LOGIN,
-    PERMISSIONS
+    LIBRARY, ALBUMS, ARTISTS, GENRES, FOLDERS, PLAYLISTS, SETTINGS, STATS, BLOCKLIST, SOURCES,
+    SOURCE_LOGIN, PERMISSIONS
 }
 
 data class DmtState(
@@ -33,13 +34,16 @@ data class DmtState(
     val filteredAlbums: List<Album> = emptyList(),
     val filteredArtists: List<Artist> = emptyList(),
     val filteredFolders: List<Folder> = emptyList(),
+    val filteredGenres: List<Genre> = emptyList(),
     val playlists: List<Playlist> = emptyList(),
     val folders: List<Folder> = emptyList(),
+    val genres: List<Genre> = emptyList(),
     val view: DmtView = DmtView.LIBRARY,
     val loginSource: SourceMode = SourceMode.JELLYFIN,
     val openAlbum: String? = null,
     val openArtist: String? = null,
     val openFolder: String? = null,
+    val openGenre: String? = null,
     val openPlaylist: String? = null,
     val nowPlayingId: String? = null,
     val title: String = "",
@@ -87,6 +91,7 @@ sealed interface DmtAction {
     data class OpenAlbum(val name: String?) : DmtAction
     data class OpenArtist(val name: String?) : DmtAction
     data class OpenFolder(val path: String?) : DmtAction
+    data class OpenGenre(val name: String?) : DmtAction
     data class OpenPlaylist(val name: String?) : DmtAction
     data class CreatePlaylist(val name: String) : DmtAction
     data class DeletePlaylist(val name: String) : DmtAction

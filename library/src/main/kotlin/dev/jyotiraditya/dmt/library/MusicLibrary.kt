@@ -86,6 +86,7 @@ private fun LibraryTrack.toEntity(): TrackEntity = TrackEntity(
     dateAdded = dateAdded,
     dateModified = dateModified,
     coverUri = coverUri?.toString(),
+    genre = genre,
 )
 
 private fun TrackEntity.toTrack(): LibraryTrack = LibraryTrack(
@@ -105,4 +106,5 @@ private fun TrackEntity.toTrack(): LibraryTrack = LibraryTrack(
     dateAdded = dateAdded,
     dateModified = dateModified,
     coverUri = coverUri?.toUri(),
+    genre = genre,
 )

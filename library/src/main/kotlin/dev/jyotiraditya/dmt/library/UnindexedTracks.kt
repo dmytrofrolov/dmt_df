@@ -109,6 +109,7 @@ object UnindexedTracks {
             dateAdded = modified,
             dateModified = modified,
             coverUri = null,
+            genre = metadata.genre,
         )
     }
 

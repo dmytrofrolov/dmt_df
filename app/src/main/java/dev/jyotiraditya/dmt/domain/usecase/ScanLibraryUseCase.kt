@@ -4,6 +4,7 @@ import dev.jyotiraditya.dmt.domain.model.LibrarySnapshot
 import dev.jyotiraditya.dmt.domain.model.toAlbums
 import dev.jyotiraditya.dmt.domain.model.toArtists
 import dev.jyotiraditya.dmt.domain.model.toFolders
+import dev.jyotiraditya.dmt.domain.model.toGenres
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
@@ -27,6 +28,7 @@ class ScanLibraryUseCase @Inject constructor(
                 albums = tracks.toAlbums(),
                 artists = tracks.toArtists(),
                 folders = tracks.toFolders(),
+                genres = tracks.toGenres(),
             )
         }
 }

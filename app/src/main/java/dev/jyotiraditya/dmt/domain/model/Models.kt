@@ -6,6 +6,7 @@ import androidx.compose.runtime.Immutable
 const val UNKNOWN_TITLE = "unknown title"
 const val UNKNOWN_ARTIST = "unknown artist"
 const val UNKNOWN_ALBUM = "unknown album"
+const val UNKNOWN_GENRE = "unknown genre"
 
 enum class TrackSource { LOCAL, JELLYFIN }
 
@@ -32,6 +33,7 @@ data class Track(
     val clipStartMs: Long? = null,
     val clipEndMs: Long? = null,
     val cue: Boolean = false,
+    val genre: String? = null,
 )
 
 @Immutable
@@ -45,6 +47,12 @@ data class Album(
 data class Artist(
     val name: String,
     val albums: Int,
+    val tracks: List<Track>,
+)
+
+@Immutable
+data class Genre(
+    val name: String,
     val tracks: List<Track>,
 )
 
@@ -74,4 +82,5 @@ data class LibrarySnapshot(
     val albums: List<Album> = emptyList(),
     val artists: List<Artist> = emptyList(),
     val folders: List<Folder> = emptyList(),
+    val genres: List<Genre> = emptyList(),
 )

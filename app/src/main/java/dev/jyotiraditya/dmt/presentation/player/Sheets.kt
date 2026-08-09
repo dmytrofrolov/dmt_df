@@ -177,6 +177,12 @@ fun InfoContent(state: DmtState) {
             value = state.album.lowercase(),
         )
     }
+    track?.genre?.takeIf { it.isNotBlank() }?.let { genre ->
+        InfoRow(
+            label = stringResource(R.string.info_genre),
+            value = genre.lowercase(),
+        )
+    }
     InfoRow(
         label = stringResource(R.string.info_duration),
         value = state.durationMs.asTime(),

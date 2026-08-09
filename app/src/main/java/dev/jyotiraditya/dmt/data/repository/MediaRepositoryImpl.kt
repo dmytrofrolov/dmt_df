@@ -95,4 +95,5 @@ private fun LibraryTrack.toTrack(): Track = Track(
     clipStartMs = clipStartMs,
     clipEndMs = clipEndMs,
     source = TrackSource.LOCAL,
+    genre = genre,
 )

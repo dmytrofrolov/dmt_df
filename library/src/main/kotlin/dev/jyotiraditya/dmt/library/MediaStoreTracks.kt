@@ -27,6 +27,7 @@ private val COLUMNS = arrayOf(
     MediaStore.Audio.Media.TRACK,
     MediaStore.Audio.Media.DATE_ADDED,
     MediaStore.Audio.Media.DATE_MODIFIED,
+    MediaStore.Audio.Media.GENRE,
 )
 
 private val TAG_COLUMNS = arrayOf(
@@ -82,6 +83,7 @@ object MediaStoreTracks {
             dateAdded = long(MediaStore.Audio.Media.DATE_ADDED),
             dateModified = long(MediaStore.Audio.Media.DATE_MODIFIED),
             coverUri = ContentUris.withAppendedId(ALBUM_ART_BASE, albumId),
+            genre = nullableText(MediaStore.Audio.Media.GENRE),
         )
     }
 
@@ -98,6 +100,9 @@ object MediaStoreTracks {
 
     private fun Cursor.text(column: String, fallback: String): String =
         getString(getColumnIndexOrThrow(column)).orUnknown(fallback)
+
+    private fun Cursor.nullableText(column: String): String? =
+        getString(getColumnIndexOrThrow(column))?.takeIf { it.isNotBlank() }
 
     private fun Cursor.long(column: String): Long = getLong(getColumnIndexOrThrow(column))
 

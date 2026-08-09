@@ -22,4 +22,5 @@ data class TrackEntity(
     val dateAdded: Long,
     val dateModified: Long,
     val coverUri: String?,
+    val genre: String? = null,
 )
