@@ -58,6 +58,7 @@ import dev.jyotiraditya.dmt.domain.model.DmtSettings
 import dev.jyotiraditya.dmt.domain.model.SourceMode
 import dev.jyotiraditya.dmt.presentation.player.DmtAction
 import dev.jyotiraditya.dmt.presentation.player.DmtState
+import dev.jyotiraditya.dmt.presentation.settings.AccentRow
 import dev.jyotiraditya.dmt.presentation.settings.FILES_ENTRY
 import dev.jyotiraditya.dmt.presentation.settings.PERMISSION_REGISTRY
 import dev.jyotiraditya.dmt.presentation.settings.PermissionEntry
@@ -518,6 +519,7 @@ private fun LookRows(settings: DmtSettings, dispatch: (DmtAction) -> Unit) {
     ) {
         dispatch(DmtAction.Config(settings.copy(rawArt = !settings.rawArt)))
     }
+    AccentRow(settings = settings, dispatch = dispatch)
 }
 
 @Composable

@@ -142,7 +142,7 @@ private fun LyricLineRows(
     val runs = remember(shown) { buildRuns(shown) }
     val secondaryRuns = remember(shown, runs) { secondaryRunsFor(shown, runs) }
 
-    val singerColor = singerColorFor(shown)
+    val singerColor = singerColorFor(shown, rememberSingerPalette())
     val hasSinger = !shown.interlude && shown.singer >= 0
     val align = alignFor(shown.voice)
 

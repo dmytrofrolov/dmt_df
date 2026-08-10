@@ -140,6 +140,8 @@
         <item quantity="other">%1$d cols</item>
     </plurals>
     <string name="set_specs">format chips</string>
+    <string name="set_accent">accent color</string>
+    <string name="accent_accept">[ accept ]</string>
     <string name="set_stop_on_dismiss">stop on app close</string>
     <string name="set_raw">raw artwork</string>
     <string name="lyrics_files_needed">all files access needed</string>

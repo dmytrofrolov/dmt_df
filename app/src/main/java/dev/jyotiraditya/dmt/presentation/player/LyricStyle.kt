@@ -18,11 +18,11 @@ internal fun isArabicScript(text: String): Boolean =
 
 internal fun TextUnit.scaledBy(factor: Float): TextUnit = (value * factor).sp
 
-internal fun singerColorFor(line: LyricLine): Color =
+internal fun singerColorFor(line: LyricLine, palette: List<Color>): Color =
     when {
-        line.interlude -> singerPalette.first()
+        line.interlude -> palette.first()
         line.singer < 0 -> GroupVoice
-        else -> singerPalette[line.singer % singerPalette.size]
+        else -> palette[line.singer % palette.size]
     }
 
 internal fun alignFor(voice: Voice): TextAlign =

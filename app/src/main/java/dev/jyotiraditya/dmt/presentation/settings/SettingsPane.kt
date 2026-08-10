@@ -1,10 +1,16 @@
 package dev.jyotiraditya.dmt.presentation.settings
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
@@ -26,6 +32,8 @@ import dev.jyotiraditya.dmt.R
 import dev.jyotiraditya.dmt.core.common.Caption
 import dev.jyotiraditya.dmt.core.common.TuiKey
 import dev.jyotiraditya.dmt.core.common.tuiClickable
+import dev.jyotiraditya.dmt.domain.model.AccentColor
+import dev.jyotiraditya.dmt.domain.model.DmtSettings
 import dev.jyotiraditya.dmt.domain.model.SourceMode
 import dev.jyotiraditya.dmt.presentation.player.DmtAction
 import dev.jyotiraditya.dmt.presentation.player.DmtState
@@ -37,6 +45,7 @@ import dev.jyotiraditya.dmt.ui.theme.TuiDim
 import dev.jyotiraditya.dmt.ui.theme.TuiFaint
 import dev.jyotiraditya.dmt.ui.theme.TuiFg
 import dev.jyotiraditya.dmt.ui.theme.TuiLine
+import dev.jyotiraditya.dmt.ui.theme.toColor
 import dev.jyotiraditya.dmt.util.allFilesAccess
 
 private val COVER_COLS_STEPS = listOf(48, 64, 80, 96)
@@ -134,6 +143,7 @@ fun SettingsPane(state: DmtState, dispatch: (DmtAction) -> Unit) {
         ) {
             dispatch(DmtAction.Config(settings.copy(listSpecs = !settings.listSpecs)))
         }
+        AccentRow(settings = settings, dispatch = dispatch)
 
         Caption(stringResource(R.string.tools))
         SettingRow(
@@ -220,6 +230,43 @@ fun SettingsPane(state: DmtState, dispatch: (DmtAction) -> Unit) {
                 color = TuiAccent,
             )
         }
+    }
+}
+
+@Composable
+fun AccentRow(settings: DmtSettings, dispatch: (DmtAction) -> Unit) {
+    var preview by remember(settings.accent) { mutableStateOf(settings.accent) }
+    Column {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 5.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.set_accent),
+                style = MaterialTheme.typography.bodyLarge,
+                color = TuiFg,
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .background(preview.toColor())
+                        .border(1.dp, TuiLine),
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                TuiKey(label = "[ ${preview.label} ]") { preview = preview.next() }
+                if (preview != settings.accent) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    TuiKey(label = stringResource(R.string.accent_accept)) {
+                        dispatch(DmtAction.Config(settings.copy(accent = preview)))
+                    }
+                }
+            }
+        }
+        HorizontalDivider(color = TuiLine)
     }
 }
 

@@ -3,6 +3,7 @@ package dev.jyotiraditya.dmt.data.repository
 import android.content.Context
 import androidx.datastore.preferences.core.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dev.jyotiraditya.dmt.data.source.local.KEY_ACCENT
 import dev.jyotiraditya.dmt.data.source.local.KEY_BLOCKED_FOLDERS
 import dev.jyotiraditya.dmt.data.source.local.KEY_COLS
 import dev.jyotiraditya.dmt.data.source.local.KEY_JELLYFIN_TOKEN
@@ -29,6 +30,7 @@ import dev.jyotiraditya.dmt.data.source.local.KEY_WAVE
 import dev.jyotiraditya.dmt.data.source.local.dmtStore
 import dev.jyotiraditya.dmt.data.source.local.encodeCounts
 import dev.jyotiraditya.dmt.data.source.local.toCounts
+import dev.jyotiraditya.dmt.domain.model.AccentColor
 import dev.jyotiraditya.dmt.domain.model.DmtSettings
 import dev.jyotiraditya.dmt.domain.model.DmtStats
 import dev.jyotiraditya.dmt.domain.model.LastSession
@@ -66,6 +68,8 @@ class PreferencesRepository @Inject constructor(
             jellyfinUrl = prefs[KEY_JELLYFIN_URL],
             jellyfinUserId = prefs[KEY_JELLYFIN_USER_ID],
             jellyfinToken = prefs[KEY_JELLYFIN_TOKEN],
+            accent = AccentColor.entries[(prefs[KEY_ACCENT]
+                ?: 0).mod(AccentColor.entries.size)],
         )
     }
 
@@ -83,6 +87,7 @@ class PreferencesRepository @Inject constructor(
             it[KEY_BLOCKED_FOLDERS] = settings.blockedFolders
             it[KEY_SOURCE_MODE] = settings.sourceMode.ordinal
             it[KEY_LIBRARY_SORT] = settings.librarySort.ordinal
+            it[KEY_ACCENT] = settings.accent.ordinal
             settings.jellyfinUrl
                 ?.let { url -> it[KEY_JELLYFIN_URL] = url }
                 ?: it.remove(KEY_JELLYFIN_URL)

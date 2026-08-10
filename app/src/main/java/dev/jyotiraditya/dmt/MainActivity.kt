@@ -26,6 +26,8 @@ import dev.jyotiraditya.dmt.presentation.player.DmtAction
 import dev.jyotiraditya.dmt.presentation.player.PlayerEffect
 import dev.jyotiraditya.dmt.presentation.player.PlayerViewModel
 import dev.jyotiraditya.dmt.ui.theme.DMTTheme
+import dev.jyotiraditya.dmt.ui.theme.TuiAccent
+import dev.jyotiraditya.dmt.ui.theme.toColor
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -45,6 +47,9 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background,
                 ) {
                     val state by playerViewModel.state.collectAsState()
+                    LaunchedEffect(state.settings.accent) {
+                        TuiAccent = state.settings.accent.toColor()
+                    }
                     LaunchedEffect(Unit) {
                         playerViewModel.effects.collect { effect ->
                             when (effect) {

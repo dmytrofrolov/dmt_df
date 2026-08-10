@@ -3,6 +3,8 @@ package dev.jyotiraditya.dmt.ui.theme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 
 private val TuiColorScheme = darkColorScheme(
     primary = TuiBright,
@@ -21,11 +23,15 @@ private val TuiColorScheme = darkColorScheme(
     error = TuiRed,
 )
 
+val LocalAccent = staticCompositionLocalOf { TuiAccent }
+
 @Composable
 fun DMTTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = TuiColorScheme,
-        typography = Typography,
-        content = content,
-    )
+    CompositionLocalProvider(LocalAccent provides TuiAccent) {
+        MaterialTheme(
+            colorScheme = TuiColorScheme,
+            typography = Typography,
+            content = content,
+        )
+    }
 }
