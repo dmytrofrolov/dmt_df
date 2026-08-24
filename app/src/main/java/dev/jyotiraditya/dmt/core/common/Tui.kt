@@ -203,7 +203,7 @@ fun TuiPanel(
             .border(1.dp, TuiLine)
             .background(TuiSurface.copy(alpha = 0.85f))
             .let { if (onClick != null) it.tuiClickable(onClick) else it }
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(12.dp),
         content = content,
     )
 }
