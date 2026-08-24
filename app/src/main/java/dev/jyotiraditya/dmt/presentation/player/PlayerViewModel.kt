@@ -585,6 +585,7 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             val session = preferencesRepository.lastSession() ?: return@launch
             val (existing, index, position) = session.resolveQueue(tracks) ?: return@launch
+            c.shuffleModeEnabled = session.shuffle
             c.setMediaItems(
                 existing.map { it.toMediaItem() },
                 index,

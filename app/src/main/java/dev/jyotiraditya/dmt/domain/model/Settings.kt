@@ -72,4 +72,5 @@ data class LastSession(
     val queueIds: List<Long>,
     val index: Int,
     val positionMs: Long,
+    val shuffle: Boolean = false,
 )

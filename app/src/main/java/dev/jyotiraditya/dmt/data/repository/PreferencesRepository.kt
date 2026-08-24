@@ -12,6 +12,7 @@ import dev.jyotiraditya.dmt.data.source.local.KEY_JELLYFIN_USER_ID
 import dev.jyotiraditya.dmt.data.source.local.KEY_LAST_INDEX
 import dev.jyotiraditya.dmt.data.source.local.KEY_LAST_POS
 import dev.jyotiraditya.dmt.data.source.local.KEY_LAST_QUEUE
+import dev.jyotiraditya.dmt.data.source.local.KEY_LAST_SHUFFLE
 import dev.jyotiraditya.dmt.data.source.local.KEY_LIBRARY_SORT
 import dev.jyotiraditya.dmt.data.source.local.KEY_NORMALIZE
 import dev.jyotiraditya.dmt.data.source.local.KEY_LYRICS_SOURCE
@@ -116,6 +117,7 @@ class PreferencesRepository @Inject constructor(
             queueIds = ids,
             index = prefs[KEY_LAST_INDEX] ?: 0,
             positionMs = prefs[KEY_LAST_POS] ?: 0L,
+            shuffle = prefs[KEY_LAST_SHUFFLE] ?: false,
         )
     }
 
@@ -124,6 +126,7 @@ class PreferencesRepository @Inject constructor(
             prefs[KEY_LAST_QUEUE] = session.queueIds.joinToString(",")
             prefs[KEY_LAST_INDEX] = session.index
             prefs[KEY_LAST_POS] = session.positionMs
+            prefs[KEY_LAST_SHUFFLE] = session.shuffle
         }
     }
 

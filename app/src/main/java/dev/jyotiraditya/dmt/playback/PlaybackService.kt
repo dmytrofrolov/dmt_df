@@ -638,6 +638,7 @@ class PlaybackService : MediaLibraryService() {
                     ?: throw UnsupportedOperationException()
                 val (existing, index, position) = session.resolveQueue(library())
                     ?: throw UnsupportedOperationException()
+                mediaSession.player.shuffleModeEnabled = session.shuffle
                 queueOf(existing, index, position)
             }
 
@@ -693,6 +694,7 @@ class PlaybackService : MediaLibraryService() {
             queueIds = ids,
             index = player.currentMediaItemIndex,
             positionMs = player.currentPosition.coerceAtLeast(0L),
+            shuffle = player.shuffleModeEnabled,
         )
         scope.launch {
             preferencesRepository.saveSession(session)
