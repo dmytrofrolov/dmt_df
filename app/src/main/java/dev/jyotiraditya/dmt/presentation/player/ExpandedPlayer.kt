@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -233,8 +232,7 @@ private fun LandscapePlayer(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(top = 12.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .padding(top = 12.dp),
             ) {
                 ControlsBlock(
                     state = state,
