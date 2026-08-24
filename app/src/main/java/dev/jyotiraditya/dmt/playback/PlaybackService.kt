@@ -56,6 +56,7 @@ import dev.jyotiraditya.dmt.library.MetadataReader
 import androidx.core.content.ContextCompat
 import dev.jyotiraditya.dmt.util.notificationPermission
 import dev.jyotiraditya.dmt.util.resolveQueue
+import dev.jyotiraditya.dmt.util.tag
 import dev.jyotiraditya.dmt.util.toMediaItem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -72,6 +73,13 @@ import kotlin.math.pow
 import kotlin.time.Duration.Companion.milliseconds
 
 private const val REPLAYGAIN_TRACK_GAIN = "REPLAYGAIN_TRACK_GAIN"
+private const val R128_TRACK_GAIN = "R128_TRACK_GAIN"
+
+/**
+ * R128 tags are referenced to -23 LUFS, ReplayGain tags to -18 LUFS.
+ * See https://github.com/complexlogic/rsgain#opus-files
+ */
+private const val R128_TO_REPLAYGAIN_OFFSET_DB = 5f
 private const val ROOT_ID = "root"
 private const val TRACKS_ID = "tracks"
 private const val ALBUMS_ID = "albums"
@@ -228,12 +236,18 @@ class PlaybackService : MediaLibraryService() {
 
     /** Returns the gain in decibels that the track at [path] asks to be played at, or null. */
     @OptIn(UnstableApi::class)
-    private suspend fun trackGainDb(path: String): Float? =
-        MetadataReader.readTags(this, Uri.fromFile(File(path)))[REPLAYGAIN_TRACK_GAIN]
-            ?.firstOrNull()
+    private suspend fun trackGainDb(path: String): Float? {
+        val tags = MetadataReader.readTags(this, Uri.fromFile(File(path)))
+
+        val replayGain = tags.tag(REPLAYGAIN_TRACK_GAIN)
             ?.replace("dB", "", ignoreCase = true)
             ?.trim()
             ?.toFloatOrNull()
+
+        val r128Gain = tags.tag(R128_TRACK_GAIN)?.toIntOrNull()
+            ?.let { it / 256f + R128_TO_REPLAYGAIN_OFFSET_DB }
+        return replayGain ?: r128Gain
+    }
 
     private fun applyReplayGain(mediaItem: MediaItem?) {
         val player = mediaSession?.player ?: return

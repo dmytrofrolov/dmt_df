@@ -86,6 +86,9 @@ fun MediaController.cycleRepeat() {
     }
 }
 
+fun Map<String, List<String>>.tag(name: String): String? =
+    entries.firstOrNull { it.key.equals(name, ignoreCase = true) }?.value?.firstOrNull()
+
 data class QueueEntry(val index: Int, val label: String)
 
 fun MediaController.queueEntries(): List<QueueEntry> {
