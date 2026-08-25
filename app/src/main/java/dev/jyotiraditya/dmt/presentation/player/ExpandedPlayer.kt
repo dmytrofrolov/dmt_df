@@ -555,6 +555,7 @@ private fun TransportRow(state: DmtState, dispatch: (DmtAction) -> Unit) {
         TuiKey(
             label = "|<<",
             big = true,
+            onHold = { dispatch(DmtAction.SeekBack) },
         ) {
             dispatch(DmtAction.Prev)
         }
@@ -568,6 +569,7 @@ private fun TransportRow(state: DmtState, dispatch: (DmtAction) -> Unit) {
         TuiKey(
             label = ">>|",
             big = true,
+            onHold = { dispatch(DmtAction.SeekForward) },
         ) {
             dispatch(DmtAction.Next)
         }

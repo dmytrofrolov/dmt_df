@@ -106,6 +106,8 @@ sealed interface DmtAction {
     data object ToggleShuffle : DmtAction
     data object CycleRepeat : DmtAction
     data class Seek(val fraction: Float) : DmtAction
+    data object SeekForward : DmtAction
+    data object SeekBack : DmtAction
     data class Expand(val value: Boolean) : DmtAction
     data class RemoveAt(val index: Int) : DmtAction
     data object OpenLyricsSources : DmtAction

@@ -164,6 +164,16 @@ class PlayerViewModel @Inject constructor(
     private fun filterGenres(genres: List<Genre>, query: String): List<Genre> =
         genres.matching(query) { listOf(it.name) }
 
+    private fun MediaController.seekHold(deltaMs: Long, seek: () -> Unit) {
+        seek()
+        reduce {
+            it.copy(
+                positionMs = (it.positionMs + deltaMs).coerceIn(0L, it.durationMs),
+                positionAtMs = SystemClock.elapsedRealtime(),
+            )
+        }
+    }
+
     private fun mutatePlaylists(block: () -> Unit = {}) {
         viewModelScope.launch(Dispatchers.IO) {
             block()
@@ -268,6 +278,8 @@ class PlayerViewModel @Inject constructor(
             DmtAction.TogglePlay -> c?.togglePlayPause()
             DmtAction.Next -> c?.seekToNext()
             DmtAction.Prev -> c?.seekToPrevious()
+            DmtAction.SeekForward -> c?.run { seekHold(seekForwardIncrement) { seekForward() } }
+            DmtAction.SeekBack -> c?.run { seekHold(-seekBackIncrement) { seekBack() } }
             DmtAction.ToggleShuffle -> c?.run { shuffleModeEnabled = !shuffleModeEnabled }
             DmtAction.CycleRepeat -> c?.cycleRepeat()
 

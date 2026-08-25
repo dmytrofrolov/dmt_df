@@ -80,6 +80,7 @@ private const val R128_TRACK_GAIN = "R128_TRACK_GAIN"
  * See https://github.com/complexlogic/rsgain#opus-files
  */
 private const val R128_TO_REPLAYGAIN_OFFSET_DB = 5f
+private const val SEEK_HOLD_STEP_MS = 5_000L
 private const val ROOT_ID = "root"
 private const val TRACKS_ID = "tracks"
 private const val ALBUMS_ID = "albums"
@@ -158,6 +159,8 @@ class PlaybackService : MediaLibraryService() {
                         .build()
                 },
             )
+            .setSeekBackIncrementMs(SEEK_HOLD_STEP_MS)
+            .setSeekForwardIncrementMs(SEEK_HOLD_STEP_MS)
             .build()
         val keepPlaybackHistory = false
         player.addAnalyticsListener(

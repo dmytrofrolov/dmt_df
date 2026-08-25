@@ -64,7 +64,10 @@ import dev.jyotiraditya.dmt.ui.theme.TuiLine
 import dev.jyotiraditya.dmt.ui.theme.TuiRaised
 import dev.jyotiraditya.dmt.ui.theme.TuiSurface
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+private const val HOLD_REPEAT_INTERVAL_MS = 200L
 
 @Composable
 fun TuiNotice(
@@ -163,7 +166,7 @@ private fun rememberPressFlash(): PressFlash {
 private class TuiPress(
     val interactionSource: MutableInteractionSource,
     private val flash: PressFlash,
-    private val isPressed: State<Boolean>,
+    val isPressed: State<Boolean>,
 ) {
     val fraction: Float
         get() = if (isPressed.value) 1f else flash.value
@@ -216,9 +219,11 @@ fun TuiKey(
     big: Boolean = false,
     fill: Boolean = false,
     accent: Boolean = false,
+    onHold: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     val press = rememberTuiPress()
+    val scope = rememberCoroutineScope()
     val restText = when {
         accent -> TuiAccent
         bright -> TuiBg
@@ -239,12 +244,21 @@ fun TuiKey(
         modifier = modifier
             .border(1.dp, lerp(restBorder, pressBorder, press.fraction))
             .background(lerp(restBg, pressBg, press.fraction))
-            .clickable(
+            .combinedClickable(
                 interactionSource = press.interactionSource,
                 indication = null,
-            ) {
-                press.click(onClick)
-            }
+                onLongClick = onHold?.let {
+                    {
+                        scope.launch {
+                            while (press.isPressed.value) {
+                                it()
+                                delay(HOLD_REPEAT_INTERVAL_MS)
+                            }
+                        }
+                    }
+                },
+                onClick = { press.click(onClick) },
+            )
             .padding(
                 horizontal = when {
                     fill -> 4.dp
