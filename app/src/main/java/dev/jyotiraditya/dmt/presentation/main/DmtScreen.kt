@@ -2,6 +2,7 @@ package dev.jyotiraditya.dmt.presentation.main
 
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -197,7 +198,7 @@ fun DmtScreen(
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     LaunchedEffect(state.expanded, route, state.view, showQueueSheet, showInfoSheet) {
-        if (route == ROUTE_SEARCH) return@LaunchedEffect
+        if (route == ROUTE_SEARCH && !state.expanded) return@LaunchedEffect
         focusManager.clearFocus()
         keyboard?.hide()
     }
@@ -221,8 +222,12 @@ fun DmtScreen(
                         .windowInsetsPadding(WindowInsets.safeDrawing)
                         .padding(horizontal = 16.dp),
                 ) {
-                    SideRail(route, ::navTo)
-                    Spacer(modifier = Modifier.width(16.dp))
+                    AnimatedVisibility(visible = !imeVisible) {
+                        Row {
+                            SideRail(route, ::navTo)
+                            Spacer(modifier = Modifier.width(16.dp))
+                        }
+                    }
                     Column(modifier = Modifier.weight(1f)) {
                         PaneNavHost(
                             navController = navController,
@@ -235,8 +240,18 @@ fun DmtScreen(
 
                         TuiNotice(error = state.error, notice = state.notice)
 
-                        if (state.nowPlayingId != null && !imeVisible) {
+                        AnimatedVisibility(visible = state.nowPlayingId != null && !imeVisible) {
                             MiniPlayerAnchor(state) { miniAnchor = it }
+                        }
+                        AnimatedVisibility(visible = imeVisible) {
+                            Column {
+                                Spacer(modifier = Modifier.height(10.dp))
+                                BottomNav(
+                                    route = route,
+                                    fraction = { sheetFraction.value },
+                                    onNav = ::navTo,
+                                )
+                            }
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                     }
@@ -261,17 +276,15 @@ fun DmtScreen(
 
                 TuiNotice(error = state.error, notice = state.notice)
 
-                if (state.nowPlayingId != null && !imeVisible) {
+                if (state.nowPlayingId != null) {
                     MiniPlayerAnchor(state) { miniAnchor = it }
                     Spacer(modifier = Modifier.height(14.dp))
                 }
-                if (!imeVisible) {
-                    BottomNav(
-                        route = route,
-                        fraction = { sheetFraction.value },
-                        onNav = ::navTo,
-                    )
-                }
+                BottomNav(
+                    route = route,
+                    fraction = { sheetFraction.value },
+                    onNav = ::navTo,
+                )
                 Spacer(modifier = Modifier.height(14.dp))
             }
         }
@@ -284,7 +297,6 @@ fun DmtScreen(
             state = state,
             dispatch = dispatch,
             anchor = miniAnchor,
-            hidden = imeVisible && !state.expanded,
             fraction = sheetFraction,
             onInfo = { showInfoSheet = true },
             onQueue = { showQueueSheet = true },

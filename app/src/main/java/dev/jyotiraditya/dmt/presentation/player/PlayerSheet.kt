@@ -60,7 +60,6 @@ fun PlayerSheet(
     state: DmtState,
     dispatch: (DmtAction) -> Unit,
     anchor: Rect?,
-    hidden: Boolean,
     fraction: Animatable<Float, AnimationVector1D>,
     onInfo: () -> Unit,
     onQueue: () -> Unit,
@@ -137,7 +136,6 @@ fun PlayerSheet(
             }
         }
 
-        if (hidden) return@BoxWithConstraints
 
         val renderFull by remember { derivedStateOf { fraction.value > 0.005f } }
         val miniOnTop by remember { derivedStateOf { fraction.value < 0.5f } }
