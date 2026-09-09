@@ -43,7 +43,7 @@ object MetadataReader {
                 val tags = retriever.retrieveTrackGroups().await().tags()
 
                 TrackMetadata(
-                    durationMs = durationUs.takeIf { it != C.TIME_UNSET }?.let(Util::usToMs) ?: 0L,
+                    durationMs = durationUs.takeIfSet()?.let(Util::usToMs) ?: 0L,
                     title = tags?.title?.toString(),
                     artist = tags?.artist?.toString(),
                     album = tags?.albumTitle?.toString(),

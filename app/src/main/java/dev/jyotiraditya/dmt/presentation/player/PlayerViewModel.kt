@@ -41,6 +41,7 @@ import dev.jyotiraditya.dmt.domain.usecase.GetLyricsUseCase
 import dev.jyotiraditya.dmt.domain.usecase.GetTrackTechUseCase
 import dev.jyotiraditya.dmt.domain.usecase.JellyfinLoginUseCase
 import dev.jyotiraditya.dmt.domain.usecase.ScanLibraryUseCase
+import dev.jyotiraditya.dmt.library.takeIfSet
 import dev.jyotiraditya.dmt.playback.PlaybackService
 import dev.jyotiraditya.dmt.util.audioPermission
 import dev.jyotiraditya.dmt.util.cycleRepeat
@@ -400,7 +401,7 @@ class PlayerViewModel @Inject constructor(
             while (isActive) {
                 val position = c.currentPosition.coerceAtLeast(0L)
                 val positionAt = SystemClock.elapsedRealtime()
-                val duration = c.duration.takeIf { d -> d != C.TIME_UNSET }?.coerceAtLeast(0L) ?: 0L
+                val duration = c.duration.takeIfSet()?.coerceAtLeast(0L) ?: currentState.durationMs
                 val index = c.currentMediaItemIndex
                 val sleepLeft = sleepEndAt?.let { end ->
                     (end - System.currentTimeMillis()).coerceAtLeast(0L)
@@ -438,8 +439,7 @@ class PlayerViewModel @Inject constructor(
     private val listener = object : Player.Listener {
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             reduce {
-                it.copy(
-                    nowPlayingId = mediaItem?.mediaId,
+                it.withNowPlaying(controller).copy(
                     lyrics = null,
                     fault = null,
                     error = null,
@@ -451,13 +451,7 @@ class PlayerViewModel @Inject constructor(
         }
 
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-            reduce {
-                it.copy(
-                    title = mediaMetadata.title?.toString() ?: "unknown",
-                    artist = mediaMetadata.artist?.toString() ?: "unknown artist",
-                    album = mediaMetadata.albumTitle?.toString().orEmpty(),
-                )
-            }
+            reduce { it.withNowPlaying(controller) }
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -515,17 +509,28 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    private fun DmtState.withNowPlaying(c: MediaController?): DmtState {
+        if (c == null) return this
+        val meta = c.mediaMetadata
+
+        return copy(
+            nowPlayingId = c.currentMediaItem?.mediaId,
+            title = meta.title?.toString() ?: title,
+            artist = meta.artist?.toString() ?: artist,
+            album = meta.albumTitle?.toString() ?: album,
+            positionMs = c.currentPosition.coerceAtLeast(0L),
+            positionAtMs = SystemClock.elapsedRealtime(),
+            durationMs = c.duration.takeIfSet()?.coerceAtLeast(0L) ?: durationMs,
+        )
+    }
+
     private fun syncFrom(c: MediaController) {
         val (queue, queuePosition) = c.queueWithPosition()
         reduce {
-            it.copy(
-                nowPlayingId = c.currentMediaItem?.mediaId,
-                title = c.mediaMetadata.title?.toString() ?: "unknown",
-                artist = c.mediaMetadata.artist?.toString() ?: "unknown artist",
+            it.withNowPlaying(c).copy(
                 isPlaying = c.isPlaying,
                 shuffle = c.shuffleModeEnabled,
                 repeat = c.repeatMode,
-                album = c.mediaMetadata.albumTitle?.toString().orEmpty(),
                 speed = c.playbackParameters.speed,
                 queue = queue,
                 queuePosition = queuePosition,
@@ -605,6 +610,19 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             val session = preferencesRepository.lastSession() ?: return@launch
             val (existing, index, position) = session.resolveQueue(tracks) ?: return@launch
+            existing.getOrNull(index)?.let { track ->
+                reduce {
+                    it.copy(
+                        nowPlayingId = track.id.toString(),
+                        title = track.title,
+                        artist = track.artist,
+                        album = track.album,
+                        durationMs = track.durationMs,
+                        positionMs = position,
+                        positionAtMs = SystemClock.elapsedRealtime(),
+                    )
+                }
+            }
             c.shuffleModeEnabled = session.shuffle
             c.setMediaItems(
                 existing.map { it.toMediaItem() },
