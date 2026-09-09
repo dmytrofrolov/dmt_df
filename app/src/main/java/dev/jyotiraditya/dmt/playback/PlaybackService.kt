@@ -70,7 +70,30 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 import kotlin.math.pow
+import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
+
+// Fisher-Yates shuffle, current track pinned at index 0.
+// https://stackoverflow.com/questions/5131341
+@UnstableApi
+private fun shuffleOrderLedBy(current: Int, count: Int): DefaultShuffleOrder {
+    val order = IntArray(count) { it }
+    val head = if (current in 0 until count) 1 else 0
+
+    if (head == 1) {
+        order[current] = order[0]
+        order[0] = current
+    }
+
+    for (i in count - 1 downTo head + 1) {
+        val j = Random.nextInt(head, i + 1)
+        val swapped = order[i]
+        order[i] = order[j]
+        order[j] = swapped
+    }
+
+    return DefaultShuffleOrder(order, Random.nextLong())
+}
 
 private const val REPLAYGAIN_TRACK_GAIN = "REPLAYGAIN_TRACK_GAIN"
 private const val R128_TRACK_GAIN = "R128_TRACK_GAIN"
@@ -190,7 +213,12 @@ class PlaybackService : MediaLibraryService() {
             object : Player.Listener {
                 override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
                     if (shuffleModeEnabled) {
-                        player.setShuffleOrder(DefaultShuffleOrder(player.mediaItemCount))
+                        player.setShuffleOrder(
+                            shuffleOrderLedBy(
+                                player.currentMediaItemIndex,
+                                player.mediaItemCount,
+                            ),
+                        )
                     }
                     publishButtons()
                 }
