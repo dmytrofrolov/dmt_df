@@ -455,7 +455,7 @@ class PlayerViewModel @Inject constructor(
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
-            reduce { it.copy(isPlaying = isPlaying) }
+            reduce { it.withNowPlaying(controller).copy(isPlaying = isPlaying) }
         }
 
         override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {

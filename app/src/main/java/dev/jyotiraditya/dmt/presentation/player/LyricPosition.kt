@@ -20,21 +20,22 @@ internal fun smoothPositionMs(
 
     LaunchedEffect(positionMs, positionAtMs, isPlaying) {
         if (!isPlaying) {
-            display.longValue = positionMs
+            display.moveTo(positionMs)
             return@LaunchedEffect
         }
 
         while (true) {
             withFrameNanos {
                 val sampledAgoMs = SystemClock.elapsedRealtime() - positionAtMs
-                val playedMs = positionMs + sampledAgoMs
-                val wouldJumpBackSlightly =
-                    playedMs < display.longValue && display.longValue - playedMs < JUMP_BACK_MS
-
-                if (!wouldJumpBackSlightly) display.longValue = playedMs
+                display.moveTo(positionMs + sampledAgoMs)
             }
         }
     }
 
     return display
+}
+
+private fun MutableLongState.moveTo(target: Long) {
+    val steppingBackSlightly = target < longValue && longValue - target < JUMP_BACK_MS
+    if (!steppingBackSlightly) longValue = target
 }
