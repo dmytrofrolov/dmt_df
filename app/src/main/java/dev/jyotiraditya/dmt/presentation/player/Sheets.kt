@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -51,6 +52,8 @@ private val DECODER_SPEC_LABELS = setOf("DEC", "HW", "IMPL", "INST")
 private val OUTPUT_ROUTE_LABELS = setOf("API", "BIT", "RATE", "BUF", "FLAGS")
 private val DEVICE_ROUTE_LABELS = setOf("VIA", "NAME", "RATES", "ENC", "CH")
 private const val CHAIN_LABEL_WIDTH = 8
+
+private const val QUEUE_ROWS_ABOVE = 2
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,7 +121,11 @@ fun QueueList(
     dispatch: (DmtAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LazyColumn(modifier = modifier) {
+    val listState = rememberLazyListState(
+        initialFirstVisibleItemIndex = (state.queuePosition - QUEUE_ROWS_ABOVE).coerceAtLeast(0),
+    )
+
+    LazyColumn(state = listState, modifier = modifier) {
         itemsIndexed(state.queue) { position, entry ->
             val current = entry.index == state.queueIndex
             Row(
