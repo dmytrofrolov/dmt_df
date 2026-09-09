@@ -48,7 +48,7 @@ object MediaStoreTracks {
             "${MediaStore.Audio.Media.IS_MUSIC} != 0" +
                 " OR ${MediaStore.Audio.Media.IS_MUSIC} IS NULL",
             null,
-            "${MediaStore.Audio.Media.TITLE} COLLATE NOCASE ASC",
+            null,
         )?.use { cursor ->
             while (cursor.moveToNext()) {
                 val track = cursor.toTrack()

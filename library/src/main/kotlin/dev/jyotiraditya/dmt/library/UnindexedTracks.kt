@@ -4,7 +4,6 @@ import android.content.Context
 import android.provider.MediaStore
 import androidx.core.net.toUri
 import androidx.media3.common.C
-import androidx.media3.common.FileTypes
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.async
@@ -13,6 +12,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import java.io.File
+import java.util.Locale
 import java.util.concurrent.TimeUnit.MILLISECONDS
 
 private const val NO_MEDIA = ".nomedia"
@@ -21,6 +21,14 @@ private const val NO_MEDIA = ".nomedia"
 private const val MAX_PARALLEL_READS = 8
 
 private val SKIPPED_DIRS = setOf("Android/data", "Android/obb")
+
+/** The type of every file extension an extractor can read, keyed in lower case. */
+private val MIME_BY_EXTENSION = mapOf(
+    "ape" to MimeTypes.AUDIO_APE,
+    "tak" to MimeTypes.AUDIO_TAK,
+    "tta" to MimeTypes.AUDIO_TTA,
+    "wv" to MimeTypes.AUDIO_WAVPACK,
+)
 
 /**
  * Reads the tracks that the platform stores but does not index, which are the formats it cannot
@@ -35,11 +43,15 @@ object UnindexedTracks {
         blocked: Set<String>,
         known: Map<String, LibraryTrack>,
     ): List<LibraryTrack> {
+        val noMedia = mutableMapOf<String, Boolean>()
         val playable = context.unclassifiedFiles()
             .filterNot { file -> SKIPPED_DIRS.any { file.absolutePath.contains(it) } }
             .filterNot { it.absolutePath.contains("/.") }
             .filterNot { it.parentFile?.absolutePath in blocked }
-            .filterNot { File(it.parentFile, NO_MEDIA).exists() }
+            .filterNot { file ->
+                val parent = file.parent ?: return@filterNot false
+                noMedia.getOrPut(parent) { File(parent, NO_MEDIA).exists() }
+            }
             .mapNotNull { file -> file.mime()?.let { file to it } }
 
         val inFlight = Semaphore(MAX_PARALLEL_READS)
@@ -59,13 +71,23 @@ object UnindexedTracks {
         }
     }
 
-    /** Returns the files that the platform stores but could not classify. */
+    /**
+     * Returns the files that the platform stores but could not classify, of the extensions an
+     * extractor can read. The type is asked of the store rather than of the file system, because a
+     * device holds far more files it could not classify than ones worth reading.
+     */
     private fun Context.unclassifiedFiles(): List<File> =
         contentResolver.query(
             MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL),
             arrayOf(MediaStore.Files.FileColumns.DATA),
-            "${MediaStore.Files.FileColumns.MEDIA_TYPE} = ?",
-            arrayOf(MediaStore.Files.FileColumns.MEDIA_TYPE_NONE.toString()),
+            "${MediaStore.Files.FileColumns.MEDIA_TYPE} = ?" +
+                MIME_BY_EXTENSION.keys.joinToString(
+                    prefix = " AND (",
+                    separator = " OR ",
+                    postfix = ")",
+                ) { "${MediaStore.Files.FileColumns.DATA} LIKE ?" },
+            arrayOf(MediaStore.Files.FileColumns.MEDIA_TYPE_NONE.toString()) +
+                MIME_BY_EXTENSION.keys.map { "%.$it" },
             null,
         )?.use { cursor ->
             buildList {
@@ -77,13 +99,7 @@ object UnindexedTracks {
         }.orEmpty()
 
     /** Returns the type of a file that an extractor can read, or null for anything else. */
-    private fun File.mime(): String? = when (FileTypes.inferFileTypeFromUri(toUri())) {
-        FileTypes.APE -> MimeTypes.AUDIO_APE
-        FileTypes.TAK -> MimeTypes.AUDIO_TAK
-        FileTypes.TTA -> MimeTypes.AUDIO_TTA
-        FileTypes.WAVPACK -> MimeTypes.AUDIO_WAVPACK
-        else -> null
-    }
+    private fun File.mime(): String? = MIME_BY_EXTENSION[extension.lowercase(Locale.ROOT)]
 
     private fun LibraryTrack.matches(file: File): Boolean =
         size == file.length() && dateModified == MILLISECONDS.toSeconds(file.lastModified())

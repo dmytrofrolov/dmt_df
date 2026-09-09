@@ -2,12 +2,16 @@ package dev.jyotiraditya.dmt.library.cue
 
 import dev.jyotiraditya.dmt.library.LibraryTrack
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 /** The stride between the ids of the tracks of one file, which bounds a sheet to that many tracks. */
 private const val VIRTUAL_ID_STRIDE = 1_000L
 
 /** The fewest tracks a sheet must describe before a file is worth splitting. */
 private const val MIN_SPLIT_TRACKS = 2
+
+/** The shortest file a rip of a disc is taken to be, below which no sheet is looked for. */
+private val MIN_SPLIT_DURATION_MS = TimeUnit.MINUTES.toMillis(10)
 
 /**
  * Splits the files that a cue sheet describes into the tracks it lists.
@@ -22,10 +26,13 @@ object CueLibrary {
     fun expand(tracks: List<LibraryTrack>): List<LibraryTrack> {
         val sheetsByDirectory = tracks
             .asSequence()
+            .filter { it.durationMs >= MIN_SPLIT_DURATION_MS }
             .map { it.path.substringBeforeLast('/') }
             .filter { it.isNotEmpty() }
             .distinct()
             .associateWith { directory -> sheetsIn(File(directory)) }
+
+        if (sheetsByDirectory.isEmpty()) return tracks
 
         return tracks.flatMap { track ->
             splitOrSelf(track, sheetsByDirectory[track.path.substringBeforeLast('/')].orEmpty())
