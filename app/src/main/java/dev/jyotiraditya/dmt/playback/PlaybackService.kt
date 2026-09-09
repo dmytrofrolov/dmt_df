@@ -229,6 +229,14 @@ class PlaybackService : MediaLibraryService() {
                     if (!isPlaying) saveSession()
                 }
 
+                override fun onPositionDiscontinuity(
+                    oldPosition: Player.PositionInfo,
+                    newPosition: Player.PositionInfo,
+                    reason: Int,
+                ) {
+                    if (reason == Player.DISCONTINUITY_REASON_SEEK) saveSession()
+                }
+
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                     saveSession()
                     applyReplayGain(mediaItem)
