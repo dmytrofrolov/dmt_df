@@ -70,6 +70,7 @@ import kotlin.time.Duration.Companion.seconds
 private val SPEED_STEPS = listOf(0.75f, 1f, 1.25f, 1.5f, 2f)
 private val SLEEP_STEPS = listOf(0, 15, 30, 60)
 private val LIBRARY_SETTLE = 500.milliseconds
+private const val SEEK_READOUT_LINGER = 700L
 private const val HOME_ART_COLS = 48
 private const val HOME_ART_CACHE_BYTES = 32 * 1024 * 1024
 
@@ -110,6 +111,7 @@ class PlayerViewModel @Inject constructor(
     private var coverJob: Job? = null
     private var techJob: Job? = null
     private var lyricsJob: Job? = null
+    private var seekingJob: Job? = null
     private var sleepEndAt: Long? = null
     private var sessionRestored = false
 
@@ -170,7 +172,13 @@ class PlayerViewModel @Inject constructor(
             it.copy(
                 positionMs = (it.positionMs + deltaMs).coerceIn(0L, it.durationMs),
                 positionAtMs = SystemClock.elapsedRealtime(),
+                seekStepMs = deltaMs,
             )
+        }
+        seekingJob?.cancel()
+        seekingJob = viewModelScope.launch {
+            delay(SEEK_READOUT_LINGER)
+            reduce { it.copy(seekStepMs = null) }
         }
     }
 

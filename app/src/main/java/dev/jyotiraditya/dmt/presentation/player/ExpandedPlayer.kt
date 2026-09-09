@@ -367,8 +367,26 @@ private fun ArtSlot(
             modifier = modifier,
         )
     } else {
-        CoverPanel(state, modifier)
+        Box(modifier = modifier) {
+            CoverPanel(state)
+            SeekReadout(state, Modifier.align(Alignment.Center))
+        }
     }
+}
+
+@Composable
+private fun SeekReadout(state: DmtState, modifier: Modifier = Modifier) {
+    val step = state.seekStepMs ?: return
+
+    Text(
+        text = "[ ${if (step > 0) ">>" else "<<"} ${state.positionMs.asTime()} ]",
+        style = MaterialTheme.typography.headlineSmall,
+        color = TuiAccent,
+        modifier = modifier
+            .background(TuiBg)
+            .border(1.dp, TuiLine)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+    )
 }
 
 @Composable
