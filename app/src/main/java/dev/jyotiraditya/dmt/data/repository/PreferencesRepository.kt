@@ -61,7 +61,10 @@ class PreferencesRepository @Inject constructor(
             romanizedLyrics = prefs[KEY_ROMANIZED_LYRICS] ?: false,
             rawArt = prefs[KEY_RAW] ?: false,
             animatedArt = prefs[KEY_ANIMATED_ART] ?: false,
-            lyricsSource = prefs[KEY_LYRICS_SOURCE]?.toLyricsSource() ?: LyricsSource.DEFAULT,
+            lyricsSource = prefs[KEY_LYRICS_SOURCE]
+                ?.toLyricsSource()
+                ?.takeIf { it != LyricsSource.LRCLIB }
+                ?: LyricsSource.DEFAULT,
             stopOnDismiss = prefs[KEY_STOP_ON_DISMISS] ?: false,
             setupDone = prefs[KEY_SETUP_DONE] ?: false,
             blockedFolders = prefs[KEY_BLOCKED_FOLDERS] ?: emptySet(),

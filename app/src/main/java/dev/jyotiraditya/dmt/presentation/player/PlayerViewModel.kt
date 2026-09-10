@@ -728,21 +728,19 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Reads the lyrics of the track being played from [source], and remembers it so that every
-     * track that follows is read the same way.
-     */
+    /** Reads the lyrics of the track being played from [source], for that track alone. */
     private fun setLyricsSource(source: LyricsSource) {
         reduce { it.copy(lyricsSource = source) }
+
+        if (source == LyricsSource.LRCLIB) {
+            fetchOnlineLyrics()
+            return
+        }
+
         viewModelScope.launch {
             val settings = preferencesRepository.settings.first()
             preferencesRepository.save(settings.copy(lyricsSource = source))
-
-            if (source == LyricsSource.LRCLIB) {
-                fetchOnlineLyrics()
-            } else {
-                loadLyrics(controller?.currentMediaItem)
-            }
+            loadLyrics(controller?.currentMediaItem)
         }
     }
 
