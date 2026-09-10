@@ -22,7 +22,6 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.PlaybackStatsListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.session.CacheBitmapLoader
 import androidx.media3.session.CommandButton
@@ -72,28 +71,6 @@ import javax.inject.Inject
 import kotlin.math.pow
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
-
-// Fisher-Yates shuffle, current track pinned at index 0.
-// https://stackoverflow.com/questions/5131341
-@UnstableApi
-private fun shuffleOrderLedBy(current: Int, count: Int): DefaultShuffleOrder {
-    val order = IntArray(count) { it }
-    val head = if (current in 0 until count) 1 else 0
-
-    if (head == 1) {
-        order[current] = order[0]
-        order[0] = current
-    }
-
-    for (i in count - 1 downTo head + 1) {
-        val j = Random.nextInt(head, i + 1)
-        val swapped = order[i]
-        order[i] = order[j]
-        order[j] = swapped
-    }
-
-    return DefaultShuffleOrder(order, Random.nextLong())
-}
 
 private const val REPLAYGAIN_TRACK_GAIN = "REPLAYGAIN_TRACK_GAIN"
 private const val R128_TRACK_GAIN = "R128_TRACK_GAIN"
@@ -147,6 +124,8 @@ class PlaybackService : MediaLibraryService() {
     private var normalizeVolume = false
     private var stopOnDismiss = false
     private val gainCache = mutableMapOf<Long, Float>()
+    private var shufflePlan: ShufflePlan? = null
+    private var pendingShuffle: LastSession? = null
 
     @OptIn(UnstableApi::class)
     override fun onCreate() {
@@ -211,14 +190,25 @@ class PlaybackService : MediaLibraryService() {
         )
         player.addListener(
             object : Player.Listener {
+                override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+                    val saved = pendingShuffle ?: return
+                    if (timeline.windowCount == 0) return
+                    pendingShuffle = null
+                    val restored = ShufflePlan.parse(saved.shuffleOrder) ?: return
+                    if (restored.count != timeline.windowCount) return
+                    shufflePlan = restored
+                    player.setShuffleOrder(restored.order())
+                }
+
                 override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
                     if (shuffleModeEnabled) {
-                        player.setShuffleOrder(
-                            shuffleOrderLedBy(
-                                player.currentMediaItemIndex,
-                                player.mediaItemCount,
-                            ),
+                        val next = ShufflePlan(
+                            seed = Random.nextLong(),
+                            head = player.currentMediaItemIndex,
+                            count = player.mediaItemCount,
                         )
+                        shufflePlan = next
+                        player.setShuffleOrder(next.order())
                     }
                     publishButtons()
                 }
@@ -262,6 +252,9 @@ class PlaybackService : MediaLibraryService() {
             .setSessionActivity(sessionActivity())
             .setMediaButtonPreferences(sessionButtons(player))
             .build()
+        scope.launch {
+            pendingShuffle = preferencesRepository.lastSession()?.takeIf { it.shuffle }
+        }
         scope.launch {
             preferencesRepository.settings.collect { settings ->
                 stopOnDismiss = settings.stopOnDismiss
@@ -748,6 +741,7 @@ class PlaybackService : MediaLibraryService() {
             index = player.currentMediaItemIndex,
             positionMs = player.currentPosition.coerceAtLeast(0L),
             shuffle = player.shuffleModeEnabled,
+            shuffleOrder = shufflePlan?.toString().orEmpty(),
         )
         scope.launch {
             preferencesRepository.saveSession(session)

@@ -73,4 +73,5 @@ data class LastSession(
     val index: Int,
     val positionMs: Long,
     val shuffle: Boolean = false,
+    val shuffleOrder: String = "",
 )
