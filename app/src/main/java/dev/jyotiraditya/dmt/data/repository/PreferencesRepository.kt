@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.jyotiraditya.dmt.data.source.local.KEY_ACCENT
+import dev.jyotiraditya.dmt.data.source.local.KEY_ANIMATED_ART
 import dev.jyotiraditya.dmt.data.source.local.KEY_BLOCKED_FOLDERS
 import dev.jyotiraditya.dmt.data.source.local.KEY_COLS
 import dev.jyotiraditya.dmt.data.source.local.KEY_JELLYFIN_TOKEN
@@ -59,6 +60,7 @@ class PreferencesRepository @Inject constructor(
             listSpecs = prefs[KEY_SPECS] ?: true,
             romanizedLyrics = prefs[KEY_ROMANIZED_LYRICS] ?: false,
             rawArt = prefs[KEY_RAW] ?: false,
+            animatedArt = prefs[KEY_ANIMATED_ART] ?: false,
             lyricsSource = prefs[KEY_LYRICS_SOURCE]?.toLyricsSource() ?: LyricsSource.DEFAULT,
             stopOnDismiss = prefs[KEY_STOP_ON_DISMISS] ?: false,
             setupDone = prefs[KEY_SETUP_DONE] ?: false,
@@ -83,6 +85,7 @@ class PreferencesRepository @Inject constructor(
             it[KEY_SPECS] = settings.listSpecs
             it[KEY_ROMANIZED_LYRICS] = settings.romanizedLyrics
             it[KEY_RAW] = settings.rawArt
+            it[KEY_ANIMATED_ART] = settings.animatedArt
             it[KEY_LYRICS_SOURCE] = settings.lyricsSource.name
             it[KEY_STOP_ON_DISMISS] = settings.stopOnDismiss
             it[KEY_SETUP_DONE] = settings.setupDone

@@ -57,6 +57,7 @@ data class DmtState(
     val queue: List<QueueEntry> = emptyList(),
     val queueIndex: Int = 0,
     val seekStepMs: Long? = null,
+    val animatedArtUrl: String? = null,
     val queuePosition: Int = 0,
     val album: String = "",
     val cover: Bitmap? = null,

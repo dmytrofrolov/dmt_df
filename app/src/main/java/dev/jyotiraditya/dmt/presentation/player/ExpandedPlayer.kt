@@ -2,7 +2,6 @@ package dev.jyotiraditya.dmt.presentation.player
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -75,6 +74,8 @@ import dev.jyotiraditya.dmt.ui.theme.TuiRaised
 import dev.jyotiraditya.dmt.ui.theme.TuiRed
 import dev.jyotiraditya.dmt.util.asTime
 import kotlin.math.abs
+
+private val NO_COVER_HEIGHT = 200.dp
 
 private val PLAYER_CHIP_LABELS = setOf("FMT", "BIT", "RATE", "KBPS", "VBR", "SRC")
 
@@ -390,43 +391,71 @@ private fun SeekReadout(state: DmtState, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun CoverPanel(state: DmtState, modifier: Modifier = Modifier) {
+private fun StaticCover(state: DmtState) {
     val rawArt = state.artRaw
 
+    when {
+        state.settings.rawArt && rawArt != null -> {
+            val image = remember(rawArt) { rawArt.asImageBitmap() }
+
+            Image(
+                bitmap = image,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.aspectRatio(rawArt.width.toFloat() / rawArt.height),
+            )
+        }
+
+        state.cover != null -> {
+            AsciiCover(
+                cover = state.cover,
+                playing = state.isPlaying,
+                wave = state.settings.wave,
+            )
+        }
+
+        else -> {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(NO_COVER_HEIGHT),
+            ) {
+                Text(
+                    text = stringResource(R.string.no_cover),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TuiFaint,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CoverPanel(state: DmtState, modifier: Modifier = Modifier) {
+    val animated = state.animatedArtUrl
+    var asciiReady by remember(animated) { mutableStateOf(false) }
+
     TuiPanel(modifier = modifier) {
-        when {
-            state.settings.rawArt && rawArt != null -> {
-                val image = remember(rawArt) { rawArt.asImageBitmap() }
-                Image(
-                    bitmap = image,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .aspectRatio(rawArt.width.toFloat() / rawArt.height),
-                )
+        Box(modifier = Modifier.align(Alignment.CenterHorizontally)) {
+            if (!asciiReady) {
+                StaticCover(state)
             }
 
-            state.cover != null -> {
-                AsciiCover(
-                    cover = state.cover,
-                    playing = state.isPlaying,
-                    wave = state.settings.wave,
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                )
-            }
-
-            else -> {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp),
-                ) {
-                    Text(
-                        text = stringResource(R.string.no_cover),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = TuiFaint,
+            if (animated != null) {
+                if (state.settings.rawArt) {
+                    AnimatedCover(
+                        url = animated,
+                        playing = state.isPlaying,
+                        modifier = Modifier.matchParentSize(),
+                    )
+                } else {
+                    AnimatedAsciiCover(
+                        url = animated,
+                        playing = state.isPlaying,
+                        cols = state.settings.cols,
+                        wave = state.settings.wave,
+                        onFirstFrame = { asciiReady = true },
                     )
                 }
             }

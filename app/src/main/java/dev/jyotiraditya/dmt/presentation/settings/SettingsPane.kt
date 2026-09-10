@@ -138,6 +138,12 @@ fun SettingsPane(state: DmtState, dispatch: (DmtAction) -> Unit) {
             dispatch(DmtAction.Config(settings.copy(rawArt = !settings.rawArt)))
         }
         SettingRow(
+            label = stringResource(R.string.set_animated_art),
+            value = if (settings.animatedArt) on else off,
+        ) {
+            dispatch(DmtAction.Config(settings.copy(animatedArt = !settings.animatedArt)))
+        }
+        SettingRow(
             label = stringResource(R.string.set_specs),
             value = if (settings.listSpecs) on else off,
         ) {

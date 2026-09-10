@@ -23,6 +23,7 @@ import dev.jyotiraditya.dmt.R
 import dev.jyotiraditya.dmt.core.base.BaseViewModel
 import dev.jyotiraditya.dmt.core.common.generateAsciiPlaceholder
 import dev.jyotiraditya.dmt.core.common.toAsciiBitmap
+import dev.jyotiraditya.dmt.data.repository.AnimatedArtworkRepository
 import dev.jyotiraditya.dmt.data.repository.CoverArtRepository
 import dev.jyotiraditya.dmt.data.repository.PlaylistRepository
 import dev.jyotiraditya.dmt.data.repository.PreferencesRepository
@@ -94,6 +95,7 @@ class PlayerViewModel @Inject constructor(
     private val getTrackTech: GetTrackTechUseCase,
     private val trackMediaRepository: TrackMediaRepository,
     private val coverArtRepository: CoverArtRepository,
+    private val animatedArtworkRepository: AnimatedArtworkRepository,
     private val playlistRepository: PlaylistRepository,
 ) : BaseViewModel<DmtAction, DmtState, PlayerEffect>(
     DmtState(
@@ -110,6 +112,7 @@ class PlayerViewModel @Inject constructor(
     }
     private var noticeJob: Job? = null
     private var coverJob: Job? = null
+    private var animatedArtJob: Job? = null
     private var techJob: Job? = null
     private var lyricsJob: Job? = null
     private var seekingJob: Job? = null
@@ -345,6 +348,9 @@ class PlayerViewModel @Inject constructor(
                     }
                 }
                 if (old.cols != intent.settings.cols) loadCover(c?.currentMediaItem)
+                if (old.animatedArt != intent.settings.animatedArt) {
+                    loadAnimatedArt(c?.currentMediaItem)
+                }
                 if (old.lyricsSource != intent.settings.lyricsSource) {
                     loadLyrics(c?.currentMediaItem)
                 }
@@ -395,6 +401,7 @@ class PlayerViewModel @Inject constructor(
             restoreSleep(c)
             restoreSpeed(c)
             loadCover(c.currentMediaItem)
+            loadAnimatedArt(c.currentMediaItem)
             loadTech(c.currentMediaItem)
             loadLyrics(c.currentMediaItem)
             restoreSession()
@@ -446,6 +453,7 @@ class PlayerViewModel @Inject constructor(
                 )
             }
             loadCover(mediaItem)
+            loadAnimatedArt(mediaItem)
             loadTech(mediaItem)
             loadLyrics(mediaItem)
         }
@@ -780,6 +788,20 @@ class PlayerViewModel @Inject constructor(
             }
             reduce {
                 if (it.nowPlayingId != forId) it else it.copy(cover = cover, artRaw = raw)
+            }
+        }
+    }
+
+    private fun loadAnimatedArt(mediaItem: MediaItem?) {
+        val forId = mediaItem?.mediaId
+        animatedArtJob?.cancel()
+        reduce { it.copy(animatedArtUrl = null) }
+        if (!currentState.settings.animatedArt) return
+        val track = currentState.tracks.find { it.id.toString() == forId } ?: return
+        animatedArtJob = viewModelScope.launch {
+            val url = withContext(Dispatchers.IO) { animatedArtworkRepository.streamUrlFor(track) }
+            reduce {
+                if (it.nowPlayingId != forId) it else it.copy(animatedArtUrl = url)
             }
         }
     }
