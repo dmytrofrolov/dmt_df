@@ -98,6 +98,12 @@ fun SettingsPane(state: DmtState, dispatch: (DmtAction) -> Unit) {
         ) {
             dispatch(DmtAction.Config(settings.copy(stopOnDismiss = !settings.stopOnDismiss)))
         }
+        SettingRow(
+            label = stringResource(R.string.set_infinite),
+            value = if (settings.infinitePlay) on else off,
+        ) {
+            dispatch(DmtAction.Config(settings.copy(infinitePlay = !settings.infinitePlay)))
+        }
 
         Caption(stringResource(R.string.section_lyrics))
 
@@ -119,6 +125,12 @@ fun SettingsPane(state: DmtState, dispatch: (DmtAction) -> Unit) {
         }
         Caption(stringResource(R.string.section_display))
 
+        SettingRow(
+            label = stringResource(R.string.set_start_page),
+            value = settings.startPage.label,
+        ) {
+            dispatch(DmtAction.Config(settings.copy(startPage = settings.startPage.next())))
+        }
         SettingRow(
             label = stringResource(R.string.set_wave),
             value = if (settings.wave) on else off,

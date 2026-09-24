@@ -22,6 +22,7 @@ import dev.jyotiraditya.dmt.R
 import dev.jyotiraditya.dmt.core.common.Caption
 import dev.jyotiraditya.dmt.core.common.tuiClickable
 import dev.jyotiraditya.dmt.domain.model.Track
+import dev.jyotiraditya.dmt.domain.model.flattenFolders
 import dev.jyotiraditya.dmt.presentation.player.DmtAction
 import dev.jyotiraditya.dmt.presentation.player.DmtState
 import dev.jyotiraditya.dmt.ui.theme.TuiAccent
@@ -63,7 +64,7 @@ fun StatsPane(state: DmtState, dispatch: (DmtAction) -> Unit) {
             )
             StatRow(
                 label = stringResource(R.string.stat_folders),
-                value = "${state.folders.size}",
+                value = "${state.folders.flattenFolders().size}",
             )
 
             Caption(stringResource(R.string.stat_top))

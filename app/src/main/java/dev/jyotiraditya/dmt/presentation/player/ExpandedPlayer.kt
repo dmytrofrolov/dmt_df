@@ -681,6 +681,17 @@ private fun StatusRow(
             dispatch(DmtAction.CycleSpeed)
         }
         TuiStatus(
+            label = stringResource(R.string.infinite_key),
+            value = if (state.settings.infinitePlay) {
+                stringResource(R.string.on)
+            } else {
+                stringResource(R.string.off)
+            },
+            on = state.settings.infinitePlay,
+        ) {
+            dispatch(DmtAction.ToggleInfinite)
+        }
+        TuiStatus(
             label = stringResource(R.string.lyrics_key),
             value = stringResource(
                 when {

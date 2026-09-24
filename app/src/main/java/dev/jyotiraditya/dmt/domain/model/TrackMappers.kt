@@ -7,18 +7,89 @@ val Track.primaryArtist: String
 
 fun String.asCredit(): String = replace(COLLAB_SEPARATORS, " + ")
 
-fun List<Track>.toFolders(): List<Folder> =
-    asSequence()
-        .filter { it.path.isNotEmpty() }
-        .groupBy { it.path.substringBeforeLast('/') }
-        .map { (dir, tracks) ->
-            Folder(
-                name = dir.removePrefix("/storage/emulated/0/").ifEmpty { "/" },
-                path = dir,
-                tracks = tracks,
-            )
+fun List<Track>.toFolders(): List<Folder> {
+    val tracksByDir =
+        asSequence()
+            .filter { it.path.isNotEmpty() }
+            .groupBy { it.path.substringBeforeLast('/') }
+
+    if (tracksByDir.isEmpty()) return emptyList()
+
+    val dirs = tracksByDir.keys.toMutableSet()
+    for (dir in tracksByDir.keys) {
+        var parent = dir.parentPath()
+        while (parent.isNotEmpty() && !parent.isVolumeRoot()) {
+            dirs.add(parent)
+            parent = parent.parentPath()
         }
-        .sortedBy { it.name.lowercase() }
+    }
+
+    fun build(path: String): Folder =
+        Folder(
+            name = path.substringAfterLast('/').ifEmpty { path },
+            path = path,
+            tracks = tracksByDir[path].orEmpty(),
+            children =
+                dirs.asSequence()
+                    .filter { it.parentPath() == path }
+                    .sortedBy { it.lowercase() }
+                    .map(::build)
+                    .toList(),
+        )
+
+    return dirs.asSequence()
+        .filter { dir ->
+            val parent = dir.parentPath()
+            parent.isEmpty() || parent.isVolumeRoot() || parent !in dirs
+        }
+        .sortedBy { it.lowercase() }
+        .map(::build)
+        .toList()
+}
+
+fun List<Folder>.findFolder(path: String): Folder? =
+    firstOrNull { it.path == path }
+        ?: asSequence().mapNotNull { it.children.findFolder(path) }.firstOrNull()
+
+fun List<Folder>.flattenFolders(): List<Folder> = flatMap { it.walk().toList() }
+
+fun Folder.allTracks(): List<Track> = tracks + children.flatMap { it.allTracks() }
+
+fun Folder.walk(): Sequence<Folder> {
+    val node = this
+    return sequence {
+        yield(node)
+        for (child in node.children) yieldAll(child.walk())
+    }
+}
+
+fun folderParentKey(path: String, roots: List<Folder>): String? {
+    val parent = path.parentPath()
+    if (parent.isEmpty() || parent.isVolumeRoot()) return null
+    return parent.takeIf { roots.findFolder(it) != null }
+}
+
+fun nextFolderQueue(roots: List<Folder>, currentDir: String): List<Track>? {
+    val ordered = roots.flattenFolders().filter { it.allTracks().isNotEmpty() }
+    if (ordered.isEmpty()) return null
+    val index =
+        ordered.indexOfFirst { it.path == currentDir }.takeIf { it >= 0 }
+            ?: ordered.indexOfLast { currentDir == it.path || currentDir.startsWith("${it.path}/") }
+    val next = ordered[(index + 1).mod(ordered.size)]
+    return next.allTracks()
+}
+
+private fun String.parentPath(): String =
+    substringBeforeLast('/', missingDelimiterValue = "")
+
+private fun String.isVolumeRoot(): Boolean {
+    if (this == "/storage/emulated/0" || this == "/sdcard" || this == "/mnt/sdcard") {
+        return true
+    }
+    if (!startsWith("/storage/")) return false
+    val rest = removePrefix("/storage/")
+    return rest.isNotEmpty() && '/' !in rest && rest != "emulated"
+}
 
 fun List<Track>.toArtists(): List<Artist> =
     groupBy { it.primaryArtist.lowercase() }

@@ -37,7 +37,9 @@ import dev.jyotiraditya.dmt.domain.model.Playlist
 import dev.jyotiraditya.dmt.domain.model.SourceMode
 import dev.jyotiraditya.dmt.domain.model.LyricsSource
 import dev.jyotiraditya.dmt.domain.model.Track
+import dev.jyotiraditya.dmt.domain.model.flattenFolders
 import dev.jyotiraditya.dmt.domain.model.homeShelves
+import dev.jyotiraditya.dmt.domain.model.nextFolderQueue
 import dev.jyotiraditya.dmt.domain.usecase.GetLyricsUseCase
 import dev.jyotiraditya.dmt.domain.usecase.GetTrackTechUseCase
 import dev.jyotiraditya.dmt.domain.usecase.JellyfinLoginUseCase
@@ -164,8 +166,10 @@ class PlayerViewModel @Inject constructor(
     private fun filterArtists(artists: List<Artist>, query: String): List<Artist> =
         artists.matching(query) { listOf(it.name) }
 
-    private fun filterFolders(folders: List<Folder>, query: String): List<Folder> =
-        folders.matching(query) { listOf(it.name) }
+    private fun filterFolders(folders: List<Folder>, query: String): List<Folder> {
+        if (query.isBlank()) return folders
+        return folders.flattenFolders().matching(query) { listOf(it.name, it.path) }
+    }
 
     private fun filterGenres(genres: List<Genre>, query: String): List<Genre> =
         genres.matching(query) { listOf(it.name) }
@@ -320,6 +324,13 @@ class PlayerViewModel @Inject constructor(
             is DmtAction.SetLyricsSource -> setLyricsSource(intent.source)
             DmtAction.CycleSleep -> cycleSleep()
             DmtAction.CycleSpeed -> cycleSpeed()
+            DmtAction.ToggleInfinite -> {
+                val settings = currentState.settings.copy(
+                    infinitePlay = !currentState.settings.infinitePlay,
+                )
+                reduce { it.copy(settings = settings) }
+                viewModelScope.launch { preferencesRepository.save(settings) }
+            }
             DmtAction.OpenEqualizer -> openEqualizer()
             DmtAction.NoEqualizer -> notify(context.getString(R.string.no_eq))
 
@@ -515,6 +526,34 @@ class PlayerViewModel @Inject constructor(
                 it.copy(fault = context.getString(R.string.playback_error, name))
             }
         }
+
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            if (playbackState == Player.STATE_ENDED) {
+                continueInfinitePlay()
+            }
+        }
+    }
+
+    private fun continueInfinitePlay() {
+        val state = currentState
+        if (!state.settings.infinitePlay) return
+        val c = controller ?: return
+        if (c.repeatMode != Player.REPEAT_MODE_OFF) return
+
+        val lastId = state.nowPlayingId ?: c.currentMediaItem?.mediaId ?: return
+        val lastTrack = state.tracks.find { it.id.toString() == lastId } ?: return
+        if (lastTrack.path.isEmpty()) return
+
+        val next = nextFolderQueue(
+            roots = state.folders,
+            currentDir = lastTrack.path.substringBeforeLast('/'),
+        ) ?: return
+        if (next.isEmpty()) return
+
+        reduce { it.copy(error = null) }
+        c.setMediaItems(next.map { it.toMediaItem() }, 0, 0L)
+        c.prepare()
+        c.play()
     }
 
     private fun DmtState.withNowPlaying(c: MediaController?): DmtState {

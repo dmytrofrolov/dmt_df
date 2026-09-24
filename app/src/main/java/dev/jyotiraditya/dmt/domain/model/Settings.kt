@@ -5,6 +5,14 @@ enum class SourceMode(val label: String) {
     JELLYFIN("jellyfin"),
 }
 
+enum class StartPage(val label: String) {
+    LIBRARY("library"),
+    HOME("home"),
+    ;
+
+    fun next(): StartPage = entries[(ordinal + 1) % entries.size]
+}
+
 enum class LibrarySort(val label: String) {
     TITLE("title"),
     ARTIST("artist"),
@@ -59,6 +67,8 @@ data class DmtSettings(
     val animatedArt: Boolean = false,
     val lyricsSource: LyricsSource = LyricsSource.DEFAULT,
     val stopOnDismiss: Boolean = false,
+    val infinitePlay: Boolean = false,
+    val startPage: StartPage = StartPage.LIBRARY,
     val setupDone: Boolean = false,
     val blockedFolders: Set<String> = emptySet(),
     val sourceMode: SourceMode = SourceMode.LOCAL,

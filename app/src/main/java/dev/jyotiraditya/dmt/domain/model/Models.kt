@@ -61,6 +61,7 @@ data class Folder(
     val name: String,
     val path: String,
     val tracks: List<Track>,
+    val children: List<Folder> = emptyList(),
 )
 
 @Immutable
