@@ -118,6 +118,7 @@ sealed interface DmtAction {
     data object CycleSleep : DmtAction
     data object CycleSpeed : DmtAction
     data object ToggleInfinite : DmtAction
+    data object ToggleFavorite : DmtAction
     data object OpenEqualizer : DmtAction
     data object NoEqualizer : DmtAction
     data class Config(val settings: DmtSettings) : DmtAction

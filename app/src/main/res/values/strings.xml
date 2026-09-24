@@ -108,6 +108,7 @@
     <string name="speed_key" translatable="false">spd</string>
     <string name="speed_value" translatable="false">%1$sx</string>
     <string name="infinite_key" translatable="false">inf</string>
+    <string name="favorite_key" translatable="false">fav</string>
     <string name="lyrics_sources_title">lyrics source</string>
     <string name="lyrics_source_embedded">embedded</string>
     <string name="lyrics_source_embedded_hint">tags inside the track</string>

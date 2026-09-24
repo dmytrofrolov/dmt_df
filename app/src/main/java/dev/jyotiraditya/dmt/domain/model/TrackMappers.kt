@@ -28,7 +28,10 @@ fun List<Track>.toFolders(): List<Folder> {
         Folder(
             name = path.substringAfterLast('/').ifEmpty { path },
             path = path,
-            tracks = tracksByDir[path].orEmpty(),
+            tracks =
+                tracksByDir[path]
+                    .orEmpty()
+                    .sortedWith(folderTrackOrder),
             children =
                 dirs.asSequence()
                     .filter { it.parentPath() == path }
@@ -46,6 +49,14 @@ fun List<Track>.toFolders(): List<Folder> {
         .map(::build)
         .toList()
 }
+
+/** Filename first; cue/disc tags break ties so a flac+cue album keeps sheet order. */
+private val folderTrackOrder: Comparator<Track> =
+    compareBy<Track, String>(String.CASE_INSENSITIVE_ORDER) { it.path.substringAfterLast('/') }
+        .thenBy { it.discNumber }
+        .thenBy { it.trackNumber.takeIf { number -> number > 0 } ?: Int.MAX_VALUE }
+        .thenBy { it.clipStartMs ?: 0L }
+        .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title }
 
 fun List<Folder>.findFolder(path: String): Folder? =
     firstOrNull { it.path == path }

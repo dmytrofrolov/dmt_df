@@ -31,6 +31,7 @@ import dev.jyotiraditya.dmt.data.repository.TrackMediaRepository
 import dev.jyotiraditya.dmt.domain.model.Album
 import dev.jyotiraditya.dmt.domain.model.Artist
 import dev.jyotiraditya.dmt.domain.model.Folder
+import dev.jyotiraditya.dmt.domain.model.FAVORITES_PLAYLIST
 import dev.jyotiraditya.dmt.domain.model.Genre
 import dev.jyotiraditya.dmt.domain.model.LibrarySort
 import dev.jyotiraditya.dmt.domain.model.Playlist
@@ -331,6 +332,7 @@ class PlayerViewModel @Inject constructor(
                 reduce { it.copy(settings = settings) }
                 viewModelScope.launch { preferencesRepository.save(settings) }
             }
+            DmtAction.ToggleFavorite -> toggleFavorite()
             DmtAction.OpenEqualizer -> openEqualizer()
             DmtAction.NoEqualizer -> notify(context.getString(R.string.no_eq))
 
@@ -877,6 +879,25 @@ class PlayerViewModel @Inject constructor(
         c.setPlaybackSpeed(next)
         viewModelScope.launch {
             preferencesRepository.saveSpeed(next)
+        }
+    }
+
+    private fun toggleFavorite() {
+        val id = currentState.nowPlayingId ?: return
+        val track = currentState.tracks.find { it.id.toString() == id } ?: return
+        if (track.path.isEmpty()) return
+
+        mutatePlaylists {
+            val liked = currentState.playlists
+                .find { it.name == FAVORITES_PLAYLIST }
+                ?.tracks
+                ?.any { it.path == track.path } == true
+            if (liked) {
+                playlistRepository.removeTrack(FAVORITES_PLAYLIST, track.path)
+            } else {
+                playlistRepository.create(FAVORITES_PLAYLIST)
+                playlistRepository.addTrack(FAVORITES_PLAYLIST, track)
+            }
         }
     }
 

@@ -70,6 +70,8 @@ data class Playlist(
     val tracks: List<Track>,
 )
 
+const val FAVORITES_PLAYLIST = "Favorites"
+
 @Immutable
 data class Spec(
     val label: String,

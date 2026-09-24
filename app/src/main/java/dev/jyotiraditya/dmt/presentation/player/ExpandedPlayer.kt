@@ -64,6 +64,7 @@ import dev.jyotiraditya.dmt.core.common.isLandscapeWindow
 import dev.jyotiraditya.dmt.core.common.tuiClickable
 import dev.jyotiraditya.dmt.core.common.windowDpSize
 import dev.jyotiraditya.dmt.domain.model.asCredit
+import dev.jyotiraditya.dmt.domain.model.FAVORITES_PLAYLIST
 import dev.jyotiraditya.dmt.ui.theme.TuiAccent
 import dev.jyotiraditya.dmt.ui.theme.TuiBg
 import dev.jyotiraditya.dmt.ui.theme.TuiDim
@@ -691,6 +692,18 @@ private fun StatusRow(
         ) {
             dispatch(DmtAction.ToggleInfinite)
         }
+        val favorited = state.isCurrentFavorited()
+        TuiStatus(
+            label = stringResource(R.string.favorite_key),
+            value = if (favorited) {
+                stringResource(R.string.on)
+            } else {
+                stringResource(R.string.off)
+            },
+            on = favorited,
+        ) {
+            dispatch(DmtAction.ToggleFavorite)
+        }
         TuiStatus(
             label = stringResource(R.string.lyrics_key),
             value = stringResource(
@@ -712,6 +725,16 @@ private fun StatusRow(
             }
         }
     }
+}
+
+private fun DmtState.isCurrentFavorited(): Boolean {
+    val id = nowPlayingId ?: return false
+    val track = tracks.find { it.id.toString() == id } ?: return false
+    if (track.path.isEmpty()) return false
+    return playlists
+        .find { it.name == FAVORITES_PLAYLIST }
+        ?.tracks
+        ?.any { it.path == track.path } == true
 }
 
 @Composable
