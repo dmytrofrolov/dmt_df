@@ -1,6 +1,7 @@
 *.iml
 .gradle
 /.idea
+.vscode
 /local.properties
 .DS_Store
 /build
@@ -11,4 +12,6 @@ local.properties
 .kotlin/
 
 dmt.keystore
+dmt-personal.keystore
 keystore.properties
+scripts/
