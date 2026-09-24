@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import dev.jyotiraditya.dmt.R
 import dev.jyotiraditya.dmt.core.common.Caption
 import dev.jyotiraditya.dmt.core.common.tuiClickable
+import dev.jyotiraditya.dmt.domain.model.flattenFolders
 import dev.jyotiraditya.dmt.presentation.player.DmtAction
 import dev.jyotiraditya.dmt.presentation.player.DmtState
 import dev.jyotiraditya.dmt.ui.theme.TuiAccent
@@ -30,8 +31,8 @@ import dev.jyotiraditya.dmt.ui.theme.TuiLine
 @Composable
 fun BlocklistPane(state: DmtState, dispatch: (DmtAction) -> Unit) {
     val blocked = state.settings.blockedFolders
-    val paths = remember {
-        (state.folders.map { it.path } + blocked)
+    val paths = remember(state.folders, blocked) {
+        (state.folders.flattenFolders().map { it.path } + blocked)
             .distinct()
             .sortedBy { it.lowercase() }
     }

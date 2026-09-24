@@ -47,6 +47,8 @@ import dev.jyotiraditya.dmt.R
 import dev.jyotiraditya.dmt.data.repository.PreferencesRepository
 import dev.jyotiraditya.dmt.domain.model.LastSession
 import dev.jyotiraditya.dmt.domain.model.Track
+import dev.jyotiraditya.dmt.domain.model.allTracks
+import dev.jyotiraditya.dmt.domain.model.findFolder
 import dev.jyotiraditya.dmt.domain.model.toAlbums
 import dev.jyotiraditya.dmt.domain.model.toArtists
 import dev.jyotiraditya.dmt.domain.model.toFolders
@@ -466,16 +468,25 @@ class PlaybackService : MediaLibraryService() {
 
             parentId.startsWith(FOLDER_PREFIX) -> {
                 val path = parentId.removePrefix(FOLDER_PREFIX)
-                tracks.toFolders()
-                    .find { it.path == path }
-                    ?.tracks
-                    .orEmpty()
-                    .map { track ->
-                        track.toMediaItem()
-                            .buildUpon()
-                            .setMediaId("$parentId/${track.id}")
-                            .build()
+                val folder = tracks.toFolders().findFolder(path)
+                buildList {
+                    folder?.children?.forEach { child ->
+                        add(
+                            browsableItem(
+                                id = FOLDER_PREFIX + child.path,
+                                title = child.name,
+                            ),
+                        )
                     }
+                    folder?.tracks?.forEach { track ->
+                        add(
+                            track.toMediaItem()
+                                .buildUpon()
+                                .setMediaId("$parentId/${track.id}")
+                                .build(),
+                        )
+                    }
+                }
             }
 
             else -> emptyList()
@@ -650,7 +661,7 @@ class PlaybackService : MediaLibraryService() {
 
                     single != null && single.mediaId.startsWith(FOLDER_PREFIX) ->
                         groupQueue(single.mediaId, FOLDER_PREFIX, tracks, startPositionMs) { key ->
-                            tracks.toFolders().find { it.path == key }?.tracks
+                            tracks.toFolders().findFolder(key)?.allTracks()
                         }
 
                     single != null && single.localConfiguration == null -> {

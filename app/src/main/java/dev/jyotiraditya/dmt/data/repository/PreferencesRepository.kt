@@ -7,6 +7,7 @@ import dev.jyotiraditya.dmt.data.source.local.KEY_ACCENT
 import dev.jyotiraditya.dmt.data.source.local.KEY_ANIMATED_ART
 import dev.jyotiraditya.dmt.data.source.local.KEY_BLOCKED_FOLDERS
 import dev.jyotiraditya.dmt.data.source.local.KEY_COLS
+import dev.jyotiraditya.dmt.data.source.local.KEY_INFINITE_PLAY
 import dev.jyotiraditya.dmt.data.source.local.KEY_JELLYFIN_TOKEN
 import dev.jyotiraditya.dmt.data.source.local.KEY_JELLYFIN_URL
 import dev.jyotiraditya.dmt.data.source.local.KEY_JELLYFIN_USER_ID
@@ -25,6 +26,7 @@ import dev.jyotiraditya.dmt.data.source.local.KEY_SETUP_DONE
 import dev.jyotiraditya.dmt.data.source.local.KEY_SOURCE_MODE
 import dev.jyotiraditya.dmt.data.source.local.KEY_SPECS
 import dev.jyotiraditya.dmt.data.source.local.KEY_SPEED
+import dev.jyotiraditya.dmt.data.source.local.KEY_START_PAGE
 import dev.jyotiraditya.dmt.data.source.local.KEY_STAT_COUNTS
 import dev.jyotiraditya.dmt.data.source.local.KEY_LIBRARY_GENERATION
 import dev.jyotiraditya.dmt.data.source.local.KEY_STAT_TOTAL
@@ -39,6 +41,7 @@ import dev.jyotiraditya.dmt.domain.model.DmtStats
 import dev.jyotiraditya.dmt.domain.model.LastSession
 import dev.jyotiraditya.dmt.domain.model.LibrarySort
 import dev.jyotiraditya.dmt.domain.model.SourceMode
+import dev.jyotiraditya.dmt.domain.model.StartPage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -66,6 +69,9 @@ class PreferencesRepository @Inject constructor(
                 ?.takeIf { it != LyricsSource.LRCLIB }
                 ?: LyricsSource.DEFAULT,
             stopOnDismiss = prefs[KEY_STOP_ON_DISMISS] ?: false,
+            infinitePlay = prefs[KEY_INFINITE_PLAY] ?: false,
+            startPage = StartPage.entries[(prefs[KEY_START_PAGE]
+                ?: StartPage.LIBRARY.ordinal).mod(StartPage.entries.size)],
             setupDone = prefs[KEY_SETUP_DONE] ?: false,
             blockedFolders = prefs[KEY_BLOCKED_FOLDERS] ?: emptySet(),
             sourceMode = SourceMode.entries[(prefs[KEY_SOURCE_MODE]
@@ -91,6 +97,8 @@ class PreferencesRepository @Inject constructor(
             it[KEY_ANIMATED_ART] = settings.animatedArt
             it[KEY_LYRICS_SOURCE] = settings.lyricsSource.name
             it[KEY_STOP_ON_DISMISS] = settings.stopOnDismiss
+            it[KEY_INFINITE_PLAY] = settings.infinitePlay
+            it[KEY_START_PAGE] = settings.startPage.ordinal
             it[KEY_SETUP_DONE] = settings.setupDone
             it[KEY_BLOCKED_FOLDERS] = settings.blockedFolders
             it[KEY_SOURCE_MODE] = settings.sourceMode.ordinal

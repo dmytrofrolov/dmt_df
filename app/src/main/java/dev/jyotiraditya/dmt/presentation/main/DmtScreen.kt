@@ -66,6 +66,8 @@ import dev.jyotiraditya.dmt.core.common.TuiTab
 import dev.jyotiraditya.dmt.core.common.fitScaleFor
 import dev.jyotiraditya.dmt.core.common.isLandscapeWindow
 import dev.jyotiraditya.dmt.domain.model.Track
+import dev.jyotiraditya.dmt.domain.model.folderParentKey
+import dev.jyotiraditya.dmt.domain.model.StartPage
 import dev.jyotiraditya.dmt.presentation.home.HomePane
 import dev.jyotiraditya.dmt.presentation.library.AlbumsPane
 import dev.jyotiraditya.dmt.presentation.library.ArtistsPane
@@ -125,7 +127,9 @@ private fun backStep(route: String, state: DmtState): DmtAction? =
             DmtView.ALBUMS -> state.openAlbum?.let { DmtAction.OpenAlbum(null) }
             DmtView.ARTISTS -> state.openArtist?.let { DmtAction.OpenArtist(null) }
             DmtView.GENRES -> state.openGenre?.let { DmtAction.OpenGenre(null) }
-            DmtView.FOLDERS -> state.openFolder?.let { DmtAction.OpenFolder(null) }
+            DmtView.FOLDERS -> state.openFolder?.let { path ->
+                DmtAction.OpenFolder(folderParentKey(path, state.folders))
+            }
             DmtView.PLAYLISTS -> state.openPlaylist?.let { DmtAction.OpenPlaylist(null) }
             else -> null
         }
@@ -143,7 +147,7 @@ private data class NavItem(val labelRes: Int, val route: String, val view: DmtVi
 
 private val NAV_ITEMS = listOf(
     NavItem(R.string.nav_home, ROUTE_HOME, null),
-    NavItem(R.string.nav_library, ROUTE_LIBRARY, DmtView.LIBRARY),
+    NavItem(R.string.nav_library, ROUTE_LIBRARY, DmtView.FOLDERS),
     NavItem(R.string.nav_search, ROUTE_SEARCH, null),
     NavItem(R.string.nav_sources, ROUTE_SOURCES, DmtView.SOURCES),
     NavItem(R.string.nav_cfg, ROUTE_CFG, DmtView.SETTINGS),
@@ -177,15 +181,35 @@ fun DmtScreen(
             launchSingleTop = true
             restoreState = true
         }
-        item.view?.let { dispatch(DmtAction.Show(it)) }
+        item.view?.let { view ->
+            val resolved =
+                if (item.route == ROUTE_LIBRARY &&
+                    view == DmtView.FOLDERS &&
+                    state.folders.isEmpty()
+                ) {
+                    DmtView.LIBRARY
+                } else {
+                    view
+                }
+            dispatch(DmtAction.Show(resolved))
+        }
     }
 
     val viewNow = rememberUpdatedState(state.view)
-    LaunchedEffect(route) {
+    LaunchedEffect(route, state.folders.isNotEmpty()) {
         if (route != ROUTE_SEARCH) dispatch(DmtAction.Query(""))
         when (route) {
-            ROUTE_LIBRARY ->
-                if (viewNow.value !in LIBRARY_VIEWS) dispatch(DmtAction.Show(DmtView.LIBRARY))
+            ROUTE_LIBRARY -> {
+                val current = viewNow.value
+                when {
+                    current !in LIBRARY_VIEWS ->
+                        dispatch(DmtAction.Show(defaultLibraryView(state.folders.isNotEmpty())))
+
+                    (current == DmtView.FOLDERS || current == DmtView.PLAYLISTS) &&
+                        state.folders.isEmpty() ->
+                        dispatch(DmtAction.Show(DmtView.LIBRARY))
+                }
+            }
 
             ROUTE_SOURCES ->
                 if (viewNow.value !in SOURCE_VIEWS) dispatch(DmtAction.Show(DmtView.SOURCES))
@@ -356,7 +380,10 @@ private fun PaneNavHost(
 
     NavHost(
         navController = navController,
-        startDestination = ROUTE_HOME,
+        startDestination = when (state.settings.startPage) {
+            StartPage.HOME -> ROUTE_HOME
+            StartPage.LIBRARY -> ROUTE_LIBRARY
+        },
         modifier = modifier,
     ) {
         composable(ROUTE_HOME) {
@@ -386,7 +413,7 @@ private fun PaneNavHost(
                     state = state,
                     dispatch = dispatch,
                     allowed = LIBRARY_VIEWS,
-                    fallback = DmtView.LIBRARY,
+                    fallback = defaultLibraryView(state.folders.isNotEmpty()),
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -432,7 +459,12 @@ private fun SectionPane(
     fallback: DmtView,
     modifier: Modifier = Modifier,
 ) {
-    val view = if (state.view in allowed) state.view else fallback
+    val view = when {
+        state.view == DmtView.FOLDERS && state.folders.isEmpty() -> fallback
+        state.view == DmtView.PLAYLISTS && state.folders.isEmpty() -> fallback
+        state.view in allowed -> state.view
+        else -> fallback
+    }
     Column(modifier = modifier) {
         ScrollMemory(view.name) {
             when {
@@ -584,6 +616,9 @@ fun Titlebar(label: String) {
 @Composable
 private fun libraryTabs(state: DmtState): List<Pair<String, DmtView>> =
     buildList {
+        if (state.folders.isNotEmpty()) {
+            add(stringResource(R.string.tab_folders) to DmtView.FOLDERS)
+        }
         add(stringResource(R.string.tab_library) to DmtView.LIBRARY)
         add(stringResource(R.string.tab_albums) to DmtView.ALBUMS)
         add(stringResource(R.string.tab_artists) to DmtView.ARTISTS)
@@ -591,10 +626,12 @@ private fun libraryTabs(state: DmtState): List<Pair<String, DmtView>> =
             add(stringResource(R.string.tab_genres) to DmtView.GENRES)
         }
         if (state.folders.isNotEmpty()) {
-            add(stringResource(R.string.tab_folders) to DmtView.FOLDERS)
             add(stringResource(R.string.tab_playlists) to DmtView.PLAYLISTS)
         }
     }
+
+private fun defaultLibraryView(hasFolders: Boolean): DmtView =
+    if (hasFolders) DmtView.FOLDERS else DmtView.LIBRARY
 
 @Composable
 private fun TabsRow(state: DmtState, dispatch: (DmtAction) -> Unit) {

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name" translatable="false">dmt</string>
+    <string name="app_name" translatable="false">dmt_df</string>
 
     <string name="tab_library">tracks</string>
     <string name="tab_albums">albums</string>
@@ -107,6 +107,7 @@
     <string name="sleep_left" translatable="false">%1$dm</string>
     <string name="speed_key" translatable="false">spd</string>
     <string name="speed_value" translatable="false">%1$sx</string>
+    <string name="infinite_key" translatable="false">inf</string>
     <string name="lyrics_sources_title">lyrics source</string>
     <string name="lyrics_source_embedded">embedded</string>
     <string name="lyrics_source_embedded_hint">tags inside the track</string>
@@ -131,6 +132,7 @@
     <string name="section_playback">playback</string>
     <string name="section_lyrics">lyrics</string>
     <string name="section_display">display</string>
+    <string name="set_start_page">start page</string>
     <string name="tools">tools</string>
     <string name="set_wave">cover wave effect</string>
     <string name="set_normalize">replay gain</string>
@@ -143,6 +145,7 @@
     <string name="set_accent">accent color</string>
     <string name="accent_accept">[ accept ]</string>
     <string name="set_stop_on_dismiss">stop on app close</string>
+    <string name="set_infinite">play next folder</string>
     <string name="set_raw">raw artwork</string>
     <string name="set_animated_art">animated artwork</string>
     <string name="lyrics_files_needed">all files access needed</string>
@@ -162,6 +165,9 @@
     <string name="set_rescan">rescan library</string>
     <string name="action_play">play</string>
     <string name="action_queue">queue</string>
+    <string name="folder_up" translatable="false">[..]</string>
+    <string name="folder_up_meta">parent</string>
+    <string name="folder_play">▶ play folder</string>
     <string name="open_album" translatable="false">[↗]</string>
     <string name="blocklist_title">folder blocklist</string>
     <string name="blocklist_edit">edit</string>

@@ -25,7 +25,10 @@ import dev.jyotiraditya.dmt.core.common.ListRow
 import dev.jyotiraditya.dmt.core.common.ScrollMemory
 import dev.jyotiraditya.dmt.core.common.TuiKey
 import dev.jyotiraditya.dmt.domain.model.Track
+import dev.jyotiraditya.dmt.domain.model.allTracks
 import dev.jyotiraditya.dmt.domain.model.asCredit
+import dev.jyotiraditya.dmt.domain.model.findFolder
+import dev.jyotiraditya.dmt.domain.model.folderParentKey
 import dev.jyotiraditya.dmt.domain.model.toAlbums
 import dev.jyotiraditya.dmt.presentation.player.DmtAction
 import dev.jyotiraditya.dmt.presentation.player.DmtState
@@ -48,6 +51,8 @@ internal class GroupSpec<T>(
     val trackMeta: (Track) -> String,
     val children: (T) -> GroupChildren,
     val open: (String?) -> DmtAction,
+    val find: ((String) -> T?)? = null,
+    val close: (T) -> DmtAction = { open(null) },
 )
 
 internal fun <T> GroupSpec<T>.tracksOf(item: T): List<Track> = children(item).flatten()
@@ -130,11 +135,22 @@ fun FoldersPane(state: DmtState, dispatch: (DmtAction) -> Unit) {
             countPlural = R.plurals.folder_count,
             key = { it.path },
             title = { it.name },
-            listMeta = { "${it.tracks.size} trk" },
+            listMeta = { folder ->
+                val dirs = folder.children.size
+                val tracks = folder.allTracks().size
+                buildString {
+                    if (dirs > 0) append("$dirs dir · ")
+                    append("$tracks trk")
+                }
+            },
             detailMeta = { it.path },
             trackMeta = { trackLine2(it, album = false) },
-            children = { GroupChildren.Tracks(it.tracks) },
+            children = { GroupChildren.Folders(it.children, it.tracks) },
             open = { DmtAction.OpenFolder(it) },
+            find = { path -> state.folders.findFolder(path) },
+            close = { folder ->
+                DmtAction.OpenFolder(folderParentKey(folder.path, state.folders))
+            },
         ),
         state = state,
         dispatch = dispatch,
@@ -147,7 +163,10 @@ private fun <T> GroupPane(
     state: DmtState,
     dispatch: (DmtAction) -> Unit,
 ) {
-    val openItem: T? = spec.items.find { spec.key(it) == spec.openKey }
+    val openItem: T? =
+        spec.openKey?.let { key ->
+            spec.find?.invoke(key) ?: spec.items.find { spec.key(it) == key }
+        }
 
     ScrollMemory(spec.openKey ?: "list") {
         if (openItem == null) {

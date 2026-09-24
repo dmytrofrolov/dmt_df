@@ -38,7 +38,7 @@ data class DmtState(
     val playlists: List<Playlist> = emptyList(),
     val folders: List<Folder> = emptyList(),
     val genres: List<Genre> = emptyList(),
-    val view: DmtView = DmtView.LIBRARY,
+    val view: DmtView = DmtView.FOLDERS,
     val loginSource: SourceMode = SourceMode.JELLYFIN,
     val openAlbum: String? = null,
     val openArtist: String? = null,
@@ -117,6 +117,7 @@ sealed interface DmtAction {
     data class SetLyricsSource(val source: LyricsSource) : DmtAction
     data object CycleSleep : DmtAction
     data object CycleSpeed : DmtAction
+    data object ToggleInfinite : DmtAction
     data object OpenEqualizer : DmtAction
     data object NoEqualizer : DmtAction
     data class Config(val settings: DmtSettings) : DmtAction
